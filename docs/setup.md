@@ -21,6 +21,16 @@ Use the project virtual environment for all commands. This keeps global Python p
 
 The app reads environment variables directly and loads `.env` when `python-dotenv` is installed from the project requirements.
 
+Core configuration defaults:
+
+- `APP_ENV=local`
+- `DATABASE_URL=sqlite:///data/app.db`
+- `UPLOAD_DIR=data/uploads`
+- `EXPORT_DIR=data/exports`
+- `PROVIDER_MODE=local`
+
+Database runtime uses SQLAlchemy with SQLite. No external database server is required.
+
 For backend-only work, install the backend runtime dependencies:
 
 ```powershell

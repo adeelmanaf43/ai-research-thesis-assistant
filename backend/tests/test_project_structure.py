@@ -15,6 +15,7 @@ def test_hour_one_root_structure_exists() -> None:
         "README.md",
         "project-roadmap.md",
         "docs/day1_validation.md",
+        "docs/day2_validation.md",
     ]
 
     for relative_path in required_paths:

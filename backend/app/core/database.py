@@ -1,10 +1,15 @@
+from collections.abc import Generator
 from pathlib import Path
-import sqlite3
 
-from backend.app.core.config import Settings, get_settings
+from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+
+from backend.app.core.config import SQLITE_PREFIX, Settings, get_settings
 
 
-SQLITE_PREFIX = "sqlite:///"
+class Base(DeclarativeBase):
+    """Base class for future SQLAlchemy models."""
 
 
 def sqlite_path_from_url(database_url: str) -> Path:
@@ -13,11 +18,43 @@ def sqlite_path_from_url(database_url: str) -> Path:
     return Path(database_url.removeprefix(SQLITE_PREFIX))
 
 
-def get_connection(settings: Settings | None = None) -> sqlite3.Connection:
+def create_database_engine(settings: Settings | None = None) -> Engine:
     active_settings = settings or get_settings()
     database_path = sqlite_path_from_url(active_settings.database_url)
     database_path.parent.mkdir(parents=True, exist_ok=True)
-    connection = sqlite3.connect(database_path)
-    connection.row_factory = sqlite3.Row
-    return connection
+    return create_engine(
+        active_settings.database_url,
+        connect_args={"check_same_thread": False},
+    )
 
+
+engine = create_database_engine()
+SessionLocal = sessionmaker(
+    bind=engine,
+    autocommit=False,
+    autoflush=False,
+    expire_on_commit=False,
+)
+
+
+def get_session_factory(database_engine: Engine) -> sessionmaker[Session]:
+    return sessionmaker(
+        bind=database_engine,
+        autocommit=False,
+        autoflush=False,
+        expire_on_commit=False,
+    )
+
+
+def get_db() -> Generator[Session, None, None]:
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def init_database(database_engine: Engine | None = None) -> None:
+    import backend.app.models  # noqa: F401
+
+    Base.metadata.create_all(bind=database_engine or engine)

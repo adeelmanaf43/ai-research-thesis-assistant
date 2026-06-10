@@ -13,7 +13,8 @@ Included now:
 - FastAPI backend skeleton with health endpoints
 - Streamlit frontend skeleton
 - Local configuration using environment variables
-- SQLite connection helper
+- SQLAlchemy SQLite database foundation
+- Base ORM models for projects, documents, chunks, analyses, and chat history
 - Pytest setup and foundation tests
 - Documentation starter set
 
@@ -75,4 +76,4 @@ sample_data/
 data/
 ```
 
-See [project-roadmap.md](project-roadmap.md), [docs/setup.md](docs/setup.md), [docs/architecture.md](docs/architecture.md), [docs/api.md](docs/api.md), and [docs/day1_validation.md](docs/day1_validation.md) for more detail.
+See [project-roadmap.md](project-roadmap.md), [docs/setup.md](docs/setup.md), [docs/architecture.md](docs/architecture.md), [docs/api.md](docs/api.md), [docs/day1_validation.md](docs/day1_validation.md), and [docs/day2_validation.md](docs/day2_validation.md) for more detail.

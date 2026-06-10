@@ -40,6 +40,18 @@ def test_backend_readme_documents_hour_four_commands() -> None:
     assert "http://127.0.0.1:8000/health" in readme
 
 
+def test_backend_readme_documents_database_base() -> None:
+    readme = (PROJECT_ROOT / "backend/README.md").read_text(encoding="utf-8")
+
+    assert "SQLAlchemy with SQLite" in readme
+    assert "DATABASE_URL" in readme
+    assert "init_database()" in readme
+    assert "users" in readme
+    assert "projects" in readme
+    assert "documents" in readme
+    assert "`Project.user_id` is nullable" in readme
+
+
 def test_pytest_config_points_to_backend_tests() -> None:
     pytest_config = (PROJECT_ROOT / "pytest.ini").read_text(encoding="utf-8")
 
