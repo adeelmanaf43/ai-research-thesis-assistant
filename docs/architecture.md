@@ -10,7 +10,7 @@ The product is local-first. The system must remain useful when Ollama is unavail
 - `backend/app/api/`: HTTP routes
 - `backend/app/schemas/`: API response/request schemas
 - `backend/app/models/`: base ORM models for users, projects, documents, chunks, analyses, and chat history
-- `backend/app/services/`: future document intelligence services
+- `backend/app/services/`: business logic services kept outside API route modules
 - `frontend/streamlit_app.py`: Streamlit entry point
 
 ## Planned Local-First Flow
@@ -32,3 +32,19 @@ Hour 3 adds base ORM tables for `User`, `Project`, `Document`, `Chunk`, `Analysi
 ## Schema Boundary
 
 Project and document Pydantic schemas provide serialization-friendly request and response contracts. Document responses intentionally omit internal storage fields such as `file_path` and `stored_filename`.
+
+Project schemas separate creation/update input from list/detail responses and reject blank project names.
+
+## Service Layer
+
+Project CRUD behavior starts in `backend/app/services/project_service.py`. Routes should call service functions instead of placing database business logic directly in API modules.
+
+Document storage path behavior starts in `backend/app/services/document_storage.py`. File storage helpers keep uploaded document paths inside the configured upload directory and use the structure `uploads/projects/{project_id}/documents/`.
+
+## Project API
+
+Project routes live in `backend/app/api/routes_projects.py` and are mounted under `/api/projects`. They remain thin FastAPI handlers over the project service layer.
+
+## Document Storage Boundary
+
+The storage foundation does not accept uploads yet. It only defines safe local path helpers for future upload endpoints. Filenames are sanitized before storage, project IDs must be positive integers, and resolved paths are checked so path traversal cannot escape the configured upload directory.

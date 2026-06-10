@@ -47,7 +47,7 @@ git check-ignore -v .venv/
 git check-ignore -v data/app.db
 git add .
 git diff --cached --name-only
-git commit -m "Week 1 Day 2 backend config and database base"
+git commit -m "Day 02: add configuration and SQLite database foundation"
 git tag week-1-day-2-backend-config-db
 ```
 
@@ -56,4 +56,3 @@ If Git reports dubious ownership on Windows, run this once with your actual loca
 ```powershell
 git config --global --add safe.directory "<absolute-project-path>"
 ```
-

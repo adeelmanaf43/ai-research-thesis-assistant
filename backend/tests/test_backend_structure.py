@@ -52,6 +52,28 @@ def test_backend_readme_documents_database_base() -> None:
     assert "`Project.user_id` is nullable" in readme
 
 
+def test_backend_readme_documents_project_api_examples() -> None:
+    readme = (PROJECT_ROOT / "backend/README.md").read_text(encoding="utf-8")
+
+    assert "Project API Examples" in readme
+    assert 'Method Post' in readme
+    assert "/api/projects" in readme
+    assert "201 Created" in readme
+    assert "204 No Content" in readme
+
+
+def test_backend_readme_documents_document_storage_foundation() -> None:
+    readme = (PROJECT_ROOT / "backend/README.md").read_text(encoding="utf-8")
+
+    assert "Document Storage Foundation" in readme
+    assert "uploads/" in readme
+    assert "projects/" in readme
+    assert "{project_id}/" in readme
+    assert "documents/" in readme
+    assert "document_storage.py" in readme
+    assert "sanitize_upload_filename()" in readme
+
+
 def test_pytest_config_points_to_backend_tests() -> None:
     pytest_config = (PROJECT_ROOT / "pytest.ini").read_text(encoding="utf-8")
 

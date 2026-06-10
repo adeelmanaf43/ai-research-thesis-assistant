@@ -2,7 +2,13 @@
 
 from backend.app.schemas.document import DocumentCreate, DocumentMetadataUpdate, DocumentResponse
 from backend.app.schemas.health import HealthResponse
-from backend.app.schemas.project import ProjectCreate, ProjectResponse, ProjectUpdate
+from backend.app.schemas.project import (
+    ProjectCreate,
+    ProjectDetailResponse,
+    ProjectListItem,
+    ProjectResponse,
+    ProjectUpdate,
+)
 
 __all__ = [
     "DocumentCreate",
@@ -10,6 +16,8 @@ __all__ = [
     "DocumentResponse",
     "HealthResponse",
     "ProjectCreate",
+    "ProjectDetailResponse",
+    "ProjectListItem",
     "ProjectResponse",
     "ProjectUpdate",
 ]

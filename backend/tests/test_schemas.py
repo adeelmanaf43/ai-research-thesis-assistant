@@ -8,6 +8,8 @@ from backend.app.schemas import (
     DocumentMetadataUpdate,
     DocumentResponse,
     ProjectCreate,
+    ProjectDetailResponse,
+    ProjectListItem,
     ProjectResponse,
     ProjectUpdate,
 )
@@ -37,7 +39,7 @@ class DocumentLike:
 
 
 def test_project_create_validates_name() -> None:
-    schema = ProjectCreate(name="Literature review", description="Chapter two")
+    schema = ProjectCreate(name="  Literature review  ", description="Chapter two")
 
     assert schema.name == "Literature review"
     assert schema.description == "Chapter two"
@@ -46,6 +48,11 @@ def test_project_create_validates_name() -> None:
 def test_project_create_rejects_empty_name() -> None:
     with pytest.raises(ValidationError):
         ProjectCreate(name="")
+
+
+def test_project_create_rejects_whitespace_name() -> None:
+    with pytest.raises(ValidationError):
+        ProjectCreate(name="   ")
 
 
 def test_project_response_serializes_from_attributes() -> None:
@@ -62,6 +69,20 @@ def test_project_update_allows_partial_updates() -> None:
 
     assert schema.name is None
     assert schema.description == "Updated description"
+
+
+def test_project_update_strips_name_and_rejects_blank_name() -> None:
+    assert ProjectUpdate(name="  Updated title  ").name == "Updated title"
+    with pytest.raises(ValidationError):
+        ProjectUpdate(name="   ")
+
+
+def test_project_list_and_detail_schemas_serialize_from_attributes() -> None:
+    list_payload = ProjectListItem.model_validate(ProjectLike()).model_dump()
+    detail_payload = ProjectDetailResponse.model_validate(ProjectLike()).model_dump()
+
+    assert list_payload["name"] == "Thesis research"
+    assert detail_payload["description"] == "Local MVP project"
 
 
 def test_document_create_validates_public_upload_metadata() -> None:
@@ -95,4 +116,3 @@ def test_document_response_excludes_internal_storage_fields() -> None:
     assert payload["status"] == "created"
     assert "file_path" not in payload
     assert "stored_filename" not in payload
-

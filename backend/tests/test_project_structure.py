@@ -16,6 +16,7 @@ def test_hour_one_root_structure_exists() -> None:
         "project-roadmap.md",
         "docs/day1_validation.md",
         "docs/day2_validation.md",
+        "docs/day3_validation.md",
     ]
 
     for relative_path in required_paths:
@@ -43,6 +44,7 @@ def test_docs_do_not_hardcode_local_machine_paths() -> None:
         PROJECT_ROOT / "README.md",
         PROJECT_ROOT / "backend" / "README.md",
         PROJECT_ROOT / "docs" / "day1_validation.md",
+        PROJECT_ROOT / "docs" / "day3_validation.md",
         PROJECT_ROOT / "docs" / "setup.md",
     ]
 
@@ -50,3 +52,25 @@ def test_docs_do_not_hardcode_local_machine_paths() -> None:
         content = doc_path.read_text(encoding="utf-8")
         assert "E:\\portfolio-projects" not in content
         assert "E:/portfolio-projects" not in content
+
+
+def test_readme_reflects_current_day_four_storage_milestone() -> None:
+    readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert "Week 1, Day 4: File storage foundation for documents." in readme
+    assert "Project CRUD service layer and FastAPI routes" in readme
+    assert "Safe document storage path helpers" in readme
+    assert "Document upload API" in readme
+    assert "Invoke-WebRequest" in readme
+    assert "/api/projects" in readme
+
+
+def test_api_docs_include_project_endpoint_examples() -> None:
+    api_docs = (PROJECT_ROOT / "docs" / "api.md").read_text(encoding="utf-8")
+
+    assert "POST /api/projects" in api_docs
+    assert "GET /api/projects" in api_docs
+    assert "PATCH /api/projects/{project_id}" in api_docs
+    assert "DELETE /api/projects/{project_id}" in api_docs
+    assert "422 Unprocessable Entity" in api_docs
+    assert "No document upload yet" not in api_docs

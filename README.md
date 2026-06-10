@@ -6,7 +6,7 @@ The project is designed to keep working without paid APIs, mandatory Ollama, or 
 
 ## Current Milestone
 
-Week 1, Day 1: Repository, environment, and project skeleton.
+Week 1, Day 4: File storage foundation for documents.
 
 Included now:
 
@@ -15,12 +15,17 @@ Included now:
 - Local configuration using environment variables
 - SQLAlchemy SQLite database foundation
 - Base ORM models for projects, documents, chunks, analyses, and chat history
+- Pydantic schemas for project and document basics
+- Project CRUD service layer and FastAPI routes
+- Isolated API tests for project endpoints using temporary SQLite databases
+- Safe document storage path helpers under `uploads/projects/{project_id}/documents/`
 - Pytest setup and foundation tests
 - Documentation starter set
 
 Not included yet:
 
 - PDF extraction
+- Document upload API
 - LLM providers
 - RAG/retrieval
 - Report export
@@ -52,6 +57,18 @@ Run the backend:
 
 Backend-only dependencies are listed in `backend/requirements.txt`.
 
+Create a local project:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/projects" -Method Post -ContentType "application/json" -Body '{"name":"Thesis project","description":"Local workspace"}'
+```
+
+List local projects:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/projects"
+```
+
 Run the frontend:
 
 ```powershell
@@ -76,4 +93,4 @@ sample_data/
 data/
 ```
 
-See [project-roadmap.md](project-roadmap.md), [docs/setup.md](docs/setup.md), [docs/architecture.md](docs/architecture.md), [docs/api.md](docs/api.md), [docs/day1_validation.md](docs/day1_validation.md), and [docs/day2_validation.md](docs/day2_validation.md) for more detail.
+See [project-roadmap.md](project-roadmap.md), [docs/setup.md](docs/setup.md), [docs/architecture.md](docs/architecture.md), [docs/api.md](docs/api.md), [docs/day1_validation.md](docs/day1_validation.md), [docs/day2_validation.md](docs/day2_validation.md), and [docs/day3_validation.md](docs/day3_validation.md) for more detail.
