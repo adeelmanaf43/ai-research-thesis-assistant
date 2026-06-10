@@ -7,7 +7,6 @@ Week 1, Day 1 confirms the repository, environment, backend skeleton, frontend s
 Run from the project root:
 
 ```powershell
-cd "E:\portfolio-projects\ai-research-and-thesis-assistant"
 .\.venv\Scripts\python.exe -m pytest
 .\.venv\Scripts\python.exe -m ruff check .
 .\.venv\Scripts\python.exe -m uvicorn backend.app.main:app --reload
@@ -46,12 +45,17 @@ Expected health response:
 Before committing:
 
 ```powershell
-git config --global --add safe.directory E:/portfolio-projects/ai-research-and-thesis-assistant
 git status
+git check-ignore -v .env
+git check-ignore -v .venv/
 git add .
+git diff --cached --name-only
 git commit -m "Week 1 Day 1 project foundation"
 git tag week-1-day-1-foundation
 ```
 
-The `safe.directory` command is only needed if Git reports dubious ownership on Windows.
+If Git reports dubious ownership on Windows, run this once with your actual local project path:
 
+```powershell
+git config --global --add safe.directory "<absolute-project-path>"
+```

@@ -35,3 +35,17 @@ def test_roadmap_documents_local_first_guardrails() -> None:
     assert "Local processing must work first" in roadmap
     assert "Ollama is optional" in roadmap
     assert "No hardcoded secrets" in roadmap
+
+
+def test_docs_do_not_hardcode_local_machine_paths() -> None:
+    docs_to_check = [
+        PROJECT_ROOT / "README.md",
+        PROJECT_ROOT / "backend" / "README.md",
+        PROJECT_ROOT / "docs" / "day1_validation.md",
+        PROJECT_ROOT / "docs" / "setup.md",
+    ]
+
+    for doc_path in docs_to_check:
+        content = doc_path.read_text(encoding="utf-8")
+        assert "E:\\portfolio-projects" not in content
+        assert "E:/portfolio-projects" not in content

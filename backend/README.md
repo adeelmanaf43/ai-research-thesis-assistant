@@ -6,10 +6,9 @@ This backend is local-first. It uses SQLite-ready configuration and does not req
 
 ## Create Virtual Environment
 
-Run these commands from the project root:
+Open PowerShell in the project root, then run:
 
 ```powershell
-cd "E:\portfolio-projects\ai-research-and-thesis-assistant"
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
@@ -60,4 +59,3 @@ python -m pytest
 ```
 
 The health endpoint test uses `httpx` against the FastAPI ASGI app directly, so it does not need a running server.
-
