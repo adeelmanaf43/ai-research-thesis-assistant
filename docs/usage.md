@@ -19,7 +19,7 @@ Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/projects" -Method 
 Example PDF upload request:
 
 ```powershell
-curl.exe -X POST "http://127.0.0.1:8000/api/projects/1/documents" -F "file=@sample_data\example.pdf;type=application/pdf"
+curl.exe -X POST "http://127.0.0.1:8000/api/projects/1/documents" -F "file=@sample_data\invoice_GAF-175351693.pdf;type=application/pdf"
 ```
 
 PDF extraction, analysis, search, Q&A, comparison, and export are intentionally not implemented yet.

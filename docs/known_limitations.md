@@ -7,4 +7,4 @@
 - No report export yet
 - No frontend/backend API calls yet
 
-These limitations are intentional for Week 1, Day 4 Hour 3.
+These limitations are intentional for the Week 1 foundation. They keep the MVP local-first and focused before document intelligence features are added.

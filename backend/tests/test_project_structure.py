@@ -18,6 +18,8 @@ def test_hour_one_root_structure_exists() -> None:
         "docs/day3_validation.md",
         "docs/day4_validation.md",
         "docs/day5_validation.md",
+        "docs/api-reference.md",
+        "docs/weekly-progress.md",
         "docs/learning-notes.md",
     ]
 
@@ -55,6 +57,8 @@ def test_docs_do_not_hardcode_local_machine_paths() -> None:
     docs_to_check = [
         PROJECT_ROOT / "README.md",
         PROJECT_ROOT / "backend" / "README.md",
+        PROJECT_ROOT / "docs" / "api-reference.md",
+        PROJECT_ROOT / "docs" / "weekly-progress.md",
         PROJECT_ROOT / "docs" / "day1_validation.md",
         PROJECT_ROOT / "docs" / "day3_validation.md",
         PROJECT_ROOT / "docs" / "day4_validation.md",
@@ -77,6 +81,8 @@ def test_readme_reflects_current_day_five_quality_milestone() -> None:
     assert "Document service placeholders" in readme
     assert "PDF-only document upload API" in readme
     assert "Ruff linting and Black formatting configuration" in readme
+    assert "docs/api-reference.md" in readme
+    assert "docs/weekly-progress.md" in readme
     assert "docs/learning-notes.md" in readme
     assert "docs/day4_validation.md" in readme
     assert "docs/day5_validation.md" in readme
@@ -115,6 +121,62 @@ def test_api_docs_include_project_endpoint_examples() -> None:
     assert "No document upload yet" not in api_docs
 
 
+def test_api_reference_documents_current_endpoints_and_boundaries() -> None:
+    api_reference = (PROJECT_ROOT / "docs" / "api-reference.md").read_text(encoding="utf-8")
+
+    required_content = [
+        "API Reference",
+        "Current Endpoints",
+        "GET /",
+        "GET /health",
+        "GET /api/v1/health",
+        "POST /api/projects",
+        "GET /api/projects",
+        "GET /api/projects/{project_id}",
+        "PATCH /api/projects/{project_id}",
+        "DELETE /api/projects/{project_id}",
+        "POST /api/projects/{project_id}/documents",
+        "Example request",
+        "Example response",
+        "Known Limitations",
+        "sample_data\\invoice_GAF-175351693.pdf",
+        "file_path",
+        "stored_filename",
+        "No Ollama or cloud provider calls yet",
+    ]
+
+    for expected_text in required_content:
+        assert expected_text in api_reference
+
+    assert "sample_data\\example.pdf" not in api_reference
+    assert "paid API keys" in api_reference
+
+
+def test_weekly_progress_summarizes_week_one_and_next_steps() -> None:
+    weekly_progress = (PROJECT_ROOT / "docs" / "weekly-progress.md").read_text(encoding="utf-8")
+
+    required_content = [
+        "Week 1 Summary",
+        "Completed Features",
+        "Demo Steps",
+        "Next Week Plan",
+        "Known Week 1 Limitations",
+        "Interview Summary",
+        "Project CRUD",
+        "PDF-only document upload",
+        "sample_data\\invoice_GAF-175351693.pdf",
+        "local PDF text extraction",
+        "No PDF extraction",
+        "paid API keys",
+        "mandatory Ollama",
+    ]
+
+    for expected_text in required_content:
+        assert expected_text in weekly_progress
+
+    assert "sample_data\\example.pdf" not in weekly_progress
+
+
 def test_day_four_validation_documents_upload_security() -> None:
     validation_doc = (PROJECT_ROOT / "docs" / "day4_validation.md").read_text(encoding="utf-8")
 
@@ -145,3 +207,29 @@ def test_day_five_validation_documents_quality_baseline() -> None:
     assert "Black" in validation_doc
     assert "pytest" in validation_doc
     assert "portfolio-ready project overview" in validation_doc
+
+
+def test_document_upload_examples_reference_existing_sample_file() -> None:
+    sample_file = PROJECT_ROOT / "sample_data" / "invoice_GAF-175351693.pdf"
+    docs_to_check = [
+        PROJECT_ROOT / "README.md",
+        PROJECT_ROOT / "backend" / "README.md",
+        PROJECT_ROOT / "docs" / "api.md",
+        PROJECT_ROOT / "docs" / "day4_validation.md",
+        PROJECT_ROOT / "docs" / "usage.md",
+    ]
+
+    assert sample_file.exists()
+    for doc_path in docs_to_check:
+        content = doc_path.read_text(encoding="utf-8")
+        assert "sample_data\\invoice_GAF-175351693.pdf" in content
+        assert "sample_data\\example.pdf" not in content
+
+
+def test_week_one_followup_docs_reflect_completed_foundation() -> None:
+    limitations = (PROJECT_ROOT / "docs" / "known_limitations.md").read_text(encoding="utf-8")
+    next_steps = (PROJECT_ROOT / "docs" / "next_steps.md").read_text(encoding="utf-8")
+
+    assert "Week 1 foundation" in limitations
+    assert "Week 2 sequence" in next_steps
+    assert "local PDF text extraction" in next_steps

@@ -16,6 +16,8 @@ def test_streamlit_app_shows_required_foundation_content() -> None:
     assert "AI Research / Thesis Assistant" in source
     assert "local-first research workspace" in source
     assert "MVP status" in source
+    assert "Week 1 foundation is complete" in source
+    assert "PDF upload storage" in source
     assert "Backend connection: placeholder only" in source
     assert "does not require paid API keys" in source
 

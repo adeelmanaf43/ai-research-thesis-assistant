@@ -6,8 +6,9 @@ PRODUCT_DESCRIPTION = (
     "freelancers, and analysts."
 )
 MVP_STATUS = (
-    "MVP status: Week 1 foundation is in progress. Document upload, PDF extraction, "
-    "search, Q&A, and export are intentionally not built yet."
+    "MVP status: Week 1 foundation is complete. Project CRUD, local SQLite setup, "
+    "and PDF upload storage are available; PDF extraction, search, Q&A, and export "
+    "are intentionally not built yet."
 )
 BACKEND_CONNECTION_PLACEHOLDER = (
     "Backend connection: placeholder only. Start the FastAPI backend separately and "

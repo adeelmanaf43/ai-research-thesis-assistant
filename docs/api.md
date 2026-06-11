@@ -133,7 +133,7 @@ Uploads one PDF document into an existing project.
 PowerShell example:
 
 ```powershell
-curl.exe -X POST "http://127.0.0.1:8000/api/projects/1/documents" -F "file=@sample_data\example.pdf;type=application/pdf"
+curl.exe -X POST "http://127.0.0.1:8000/api/projects/1/documents" -F "file=@sample_data\invoice_GAF-175351693.pdf;type=application/pdf"
 ```
 
 Request type: `multipart/form-data`
@@ -150,7 +150,7 @@ Response:
 {
   "id": 1,
   "project_id": 1,
-  "original_filename": "example.pdf",
+  "original_filename": "invoice_GAF-175351693.pdf",
   "mime_type": "application/pdf",
   "file_size_bytes": 1024,
   "page_count": null,

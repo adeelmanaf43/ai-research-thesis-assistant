@@ -127,7 +127,7 @@ uploads/
         {stored_filename}
 ```
 
-Hour 1 of Day 4 adds path helper functions in `backend/app/services/document_storage.py`.
+The storage foundation adds path helper functions in `backend/app/services/document_storage.py`.
 
 - `sanitize_upload_filename()` removes path components and unsafe filename characters.
 - `build_stored_document_filename()` adds a unique safe prefix to an original filename.
@@ -139,7 +139,7 @@ These helpers do not upload, parse, or extract PDF content yet. They only establ
 
 ## Document Service Foundation
 
-Hour 2 of Day 4 adds document service functions in `backend/app/services/document_service.py`.
+The document service foundation adds functions in `backend/app/services/document_service.py`.
 
 - `save_uploaded_file()` writes provided file bytes to the safe project document directory.
 - `create_document_record()` creates the database row for a saved document file.
@@ -150,7 +150,7 @@ These functions are service-layer building blocks used by the document upload AP
 
 ## Document Upload API
 
-Hour 3 of Day 4 adds a PDF-only upload endpoint:
+The document API includes a PDF-only upload endpoint:
 
 ```text
 POST /api/projects/{project_id}/documents
@@ -159,7 +159,7 @@ POST /api/projects/{project_id}/documents
 Manual example:
 
 ```powershell
-curl.exe -X POST "http://127.0.0.1:8000/api/projects/1/documents" -F "file=@sample_data\example.pdf;type=application/pdf"
+curl.exe -X POST "http://127.0.0.1:8000/api/projects/1/documents" -F "file=@sample_data\invoice_GAF-175351693.pdf;type=application/pdf"
 ```
 
 Expected response status: `201 Created`.

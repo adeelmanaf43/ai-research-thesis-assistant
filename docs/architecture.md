@@ -27,7 +27,7 @@ The backend loads local settings from environment variables and `.env` when avai
 
 The backend uses SQLAlchemy with SQLite for the local-first MVP. `backend/app/core/database.py` exposes the shared engine, `SessionLocal`, `get_db()` FastAPI dependency, declarative `Base`, and `init_database()` utility.
 
-Hour 3 adds base ORM tables for `User`, `Project`, `Document`, `Chunk`, `Analysis`, and `ChatHistory`. User ownership is optional on projects so the MVP can work without a login flow.
+The Week 1 foundation includes base ORM tables for `User`, `Project`, `Document`, `Chunk`, `Analysis`, and `ChatHistory`. User ownership is optional on projects so the MVP can work without a login flow.
 
 ## Schema Boundary
 
@@ -49,7 +49,7 @@ Project routes live in `backend/app/api/routes_projects.py` and are mounted unde
 
 ## Document API
 
-Document upload routes live in `backend/app/api/routes_documents.py` and are mounted under `/api/projects/{project_id}/documents`. The Hour 3 upload route validates project existence, PDF extension, provided content type, and configured file size before calling document services.
+Document upload routes live in `backend/app/api/routes_documents.py` and are mounted under `/api/projects/{project_id}/documents`. The upload route validates project existence, PDF extension, provided content type, and configured file size before calling document services.
 
 ## Document Storage Boundary
 
