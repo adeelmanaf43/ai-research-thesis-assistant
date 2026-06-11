@@ -7,4 +7,3 @@ class HealthResponse(BaseModel):
     version: str
     environment: str
     mode: str
-

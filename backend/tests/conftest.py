@@ -1,9 +1,8 @@
-from pathlib import Path
 import shutil
 import uuid
+from pathlib import Path
 
 import pytest
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 TEST_TMP_ROOT = PROJECT_ROOT / "data" / "test_tmp"

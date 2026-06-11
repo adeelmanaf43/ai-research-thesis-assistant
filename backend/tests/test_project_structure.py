@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -18,6 +17,8 @@ def test_hour_one_root_structure_exists() -> None:
         "docs/day2_validation.md",
         "docs/day3_validation.md",
         "docs/day4_validation.md",
+        "docs/day5_validation.md",
+        "docs/learning-notes.md",
     ]
 
     for relative_path in required_paths:
@@ -57,6 +58,7 @@ def test_docs_do_not_hardcode_local_machine_paths() -> None:
         PROJECT_ROOT / "docs" / "day1_validation.md",
         PROJECT_ROOT / "docs" / "day3_validation.md",
         PROJECT_ROOT / "docs" / "day4_validation.md",
+        PROJECT_ROOT / "docs" / "day5_validation.md",
         PROJECT_ROOT / "docs" / "setup.md",
     ]
 
@@ -66,17 +68,39 @@ def test_docs_do_not_hardcode_local_machine_paths() -> None:
         assert "E:/portfolio-projects" not in content
 
 
-def test_readme_reflects_current_day_four_storage_milestone() -> None:
+def test_readme_reflects_current_day_five_quality_milestone() -> None:
     readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
 
-    assert "Week 1, Day 4: File storage foundation for documents." in readme
+    assert "Week 1, Day 5: Development tooling and quality baseline." in readme
     assert "Project CRUD service layer and FastAPI routes" in readme
     assert "Safe document storage path helpers" in readme
     assert "Document service placeholders" in readme
     assert "PDF-only document upload API" in readme
+    assert "Ruff linting and Black formatting configuration" in readme
+    assert "docs/learning-notes.md" in readme
     assert "docs/day4_validation.md" in readme
+    assert "docs/day5_validation.md" in readme
     assert "Invoke-WebRequest" in readme
     assert "/api/projects" in readme
+
+
+def test_readme_has_portfolio_sections() -> None:
+    readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+
+    required_sections = [
+        "## Problem",
+        "## Solution",
+        "## Architecture",
+        "## Tech Stack",
+        "## Setup",
+        "## Current Features",
+        "## Roadmap",
+        "## Limitations",
+        "## Screenshots",
+    ]
+
+    for section in required_sections:
+        assert section in readme
 
 
 def test_api_docs_include_project_endpoint_examples() -> None:
@@ -99,3 +123,25 @@ def test_day_four_validation_documents_upload_security() -> None:
     assert "Filename sanitization" in validation_doc
     assert "Path traversal" in validation_doc
     assert "Generated files under `data/uploads/` are ignored by Git" in validation_doc
+
+
+def test_learning_notes_cover_week_one_interview_topics() -> None:
+    learning_notes = (PROJECT_ROOT / "docs" / "learning-notes.md").read_text(encoding="utf-8")
+
+    assert "Week 1 Learning Notes" in learning_notes
+    assert "local-first" in learning_notes
+    assert "service layer" in learning_notes
+    assert "PDF Upload API" in learning_notes
+    assert "Testing Strategy" in learning_notes
+    assert "Quality Baseline" in learning_notes
+    assert "Strong Interview Summary" in learning_notes
+
+
+def test_day_five_validation_documents_quality_baseline() -> None:
+    validation_doc = (PROJECT_ROOT / "docs" / "day5_validation.md").read_text(encoding="utf-8")
+
+    assert "Week 1 Day 5 Validation" in validation_doc
+    assert "Ruff" in validation_doc
+    assert "Black" in validation_doc
+    assert "pytest" in validation_doc
+    assert "portfolio-ready project overview" in validation_doc

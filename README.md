@@ -4,38 +4,69 @@ A local-first document intelligence web app for students, researchers, thesis wr
 
 The project is designed to keep working without paid APIs, mandatory Ollama, or cloud services. Week 1 focuses on a professional project foundation: clean structure, configuration, tests, documentation, and a minimal working app skeleton.
 
-## Current Milestone
+## Problem
 
-Week 1, Day 4: File storage foundation for documents.
+Research and thesis workflows often spread across PDFs, notes, spreadsheets, chat tools, and manual summaries. Many AI document tools also assume cloud uploads, paid API keys, or large model availability before the core workflow is useful.
 
-Included now:
+This project addresses that gap by building a local-first assistant that can manage research projects and document intake before optional AI layers are added.
 
-- FastAPI backend skeleton with health endpoints
-- Streamlit frontend skeleton
-- Local configuration using environment variables
-- SQLAlchemy SQLite database foundation
-- Base ORM models for projects, documents, chunks, analyses, and chat history
-- Pydantic schemas for project and document basics
-- Project CRUD service layer and FastAPI routes
-- Isolated API tests for project endpoints using temporary SQLite databases
-- Safe document storage path helpers under `uploads/projects/{project_id}/documents/`
-- Document service placeholders for saving files, creating records, status updates, and project-scoped document fetches
-- PDF-only document upload API with project existence, extension, content type, and size validation
-- Pytest setup and foundation tests
-- Documentation starter set
+## Solution
 
-Not included yet:
+AI Research / Thesis Assistant is being built as a local document intelligence app. The first milestone focuses on reliable foundations:
 
-- PDF extraction
-- LLM providers
-- RAG/retrieval
-- Report export
-- Authentication
-- Payments
-- Docker
-- Cloud AI APIs
+- Create and manage research projects
+- Upload PDF documents safely into project-scoped local storage
+- Store document metadata in SQLite
+- Keep business logic testable through service layers
+- Add deterministic tests, documentation, linting, and formatting
 
-## Quick Start
+Future milestones will add local PDF extraction, cleaning, chunking, search, source-grounded Q&A, literature matrices, comparison, and report export.
+
+## Architecture
+
+The app uses a modular FastAPI backend and a Streamlit frontend shell.
+
+```text
+backend/
+  app/
+    api/          HTTP route modules
+    core/         configuration and database setup
+    models/       SQLAlchemy ORM models
+    schemas/      Pydantic request and response contracts
+    services/     business logic and storage helpers
+  tests/          pytest suite
+frontend/
+  streamlit_app.py
+docs/
+sample_data/
+data/
+```
+
+Important boundaries:
+
+- API routes handle HTTP concerns.
+- Services handle business logic.
+- Schemas define public API contracts.
+- Models define persistence.
+- Local files stay under `data/uploads/`.
+
+## Tech Stack
+
+- Python
+- FastAPI
+- Streamlit
+- SQLite
+- SQLAlchemy
+- Pydantic
+- Pytest
+- Ruff
+- Black
+
+No Docker, paid API key, cloud provider, auth system, or payment layer is required for the Week 1 foundation.
+
+## Setup
+
+Create and activate a virtual environment:
 
 ```powershell
 python -m venv .venv
@@ -50,30 +81,23 @@ Run tests:
 .\.venv\Scripts\python.exe -m pytest
 ```
 
+Run quality checks:
+
+```powershell
+.\.venv\Scripts\python.exe -m ruff check .
+.\.venv\Scripts\python.exe -m black --check --workers 1 backend frontend
+```
+
+Format Python files:
+
+```powershell
+.\.venv\Scripts\python.exe -m black --workers 1 backend frontend
+```
+
 Run the backend:
 
 ```powershell
 .\.venv\Scripts\python.exe -m uvicorn backend.app.main:app --reload
-```
-
-Backend-only dependencies are listed in `backend/requirements.txt`.
-
-Create a local project:
-
-```powershell
-Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/projects" -Method Post -ContentType "application/json" -Body '{"name":"Thesis project","description":"Local workspace"}'
-```
-
-List local projects:
-
-```powershell
-Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/projects"
-```
-
-Upload a PDF document to a project:
-
-```powershell
-curl.exe -X POST "http://127.0.0.1:8000/api/projects/1/documents" -F "file=@sample_data\example.pdf;type=application/pdf"
 ```
 
 Run the frontend:
@@ -82,22 +106,90 @@ Run the frontend:
 .\.venv\Scripts\streamlit.exe run frontend/streamlit_app.py
 ```
 
-## Project Structure
+## Current Features
 
-```text
-backend/
-  app/
-    api/
-    core/
-    models/
-    schemas/
-    services/
-  tests/
-frontend/
-  pages/
-docs/
-sample_data/
-data/
+Week 1, Day 5: Development tooling and quality baseline.
+
+Included now:
+
+- FastAPI backend skeleton with health endpoints
+- Streamlit frontend skeleton
+- Local configuration using environment variables
+- SQLAlchemy SQLite database foundation
+- Base ORM models for projects, documents, chunks, analyses, and chat history
+- Pydantic schemas for project and document basics
+- Project CRUD service layer and FastAPI routes
+- Isolated API tests for project endpoints using temporary SQLite databases
+- Safe document storage path helpers under `uploads/projects/{project_id}/documents/`
+- Document service placeholders for saving files, creating records, status updates, and project-scoped document fetches
+- PDF-only document upload API with project existence, extension, content type, and size validation
+- Ruff linting and Black formatting configuration
+- Pytest setup and foundation tests
+- Documentation starter set
+
+Example project creation:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/projects" -Method Post -ContentType "application/json" -Body '{"name":"Thesis project","description":"Local workspace"}'
 ```
 
-See [project-roadmap.md](project-roadmap.md), [docs/setup.md](docs/setup.md), [docs/architecture.md](docs/architecture.md), [docs/api.md](docs/api.md), [docs/day1_validation.md](docs/day1_validation.md), [docs/day2_validation.md](docs/day2_validation.md), [docs/day3_validation.md](docs/day3_validation.md), and [docs/day4_validation.md](docs/day4_validation.md) for more detail.
+Example project listing:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/projects"
+```
+
+Example PDF upload:
+
+```powershell
+curl.exe -X POST "http://127.0.0.1:8000/api/projects/1/documents" -F "file=@sample_data\example.pdf;type=application/pdf"
+```
+
+## Roadmap
+
+Near-term milestones:
+
+- Local PDF text extraction
+- Text cleaning
+- Section detection
+- Chunking with overlap
+- Local summaries and keyword extraction
+- TF-IDF search
+- Source-grounded Q&A
+- Literature review matrix
+- Multi-paper comparison
+- Markdown, DOCX, and PDF report export
+- Optional Ollama provider with strict context limits and local fallback
+
+See [project-roadmap.md](project-roadmap.md) for the full staged plan.
+
+## Limitations
+
+Not included yet:
+
+- PDF extraction
+- OCR or scanned PDF handling
+- LLM providers
+- RAG/retrieval
+- Report export
+- Authentication
+- Payments
+- Docker
+- Cloud AI APIs
+
+The current upload API stores PDF bytes and document metadata only. It does not parse, summarize, or analyze document content yet.
+
+## Screenshots
+
+Screenshots will be added after the frontend has meaningful project and document workflows.
+
+Planned placeholders:
+
+- Backend health check
+- Streamlit foundation screen
+- Project list workflow
+- PDF upload workflow
+
+## Documentation
+
+See [docs/setup.md](docs/setup.md), [docs/architecture.md](docs/architecture.md), [docs/api.md](docs/api.md), [docs/learning-notes.md](docs/learning-notes.md), [docs/day1_validation.md](docs/day1_validation.md), [docs/day2_validation.md](docs/day2_validation.md), [docs/day3_validation.md](docs/day3_validation.md), [docs/day4_validation.md](docs/day4_validation.md), and [docs/day5_validation.md](docs/day5_validation.md) for more detail.

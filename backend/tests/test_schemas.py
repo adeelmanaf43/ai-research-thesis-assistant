@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
@@ -20,8 +20,8 @@ class ProjectLike:
     user_id = None
     name = "Thesis research"
     description = "Local MVP project"
-    created_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
-    updated_at = datetime(2026, 1, 2, tzinfo=timezone.utc)
+    created_at = datetime(2026, 1, 1, tzinfo=UTC)
+    updated_at = datetime(2026, 1, 2, tzinfo=UTC)
 
 
 class DocumentLike:
@@ -35,7 +35,7 @@ class DocumentLike:
     page_count = 12
     word_count = 4500
     status = "created"
-    uploaded_at = datetime(2026, 1, 3, tzinfo=timezone.utc)
+    uploaded_at = datetime(2026, 1, 3, tzinfo=UTC)
 
 
 def test_project_create_validates_name() -> None:
@@ -61,7 +61,7 @@ def test_project_response_serializes_from_attributes() -> None:
     assert payload["id"] == 1
     assert payload["user_id"] is None
     assert payload["name"] == "Thesis research"
-    assert payload["created_at"] == datetime(2026, 1, 1, tzinfo=timezone.utc)
+    assert payload["created_at"] == datetime(2026, 1, 1, tzinfo=UTC)
 
 
 def test_project_update_allows_partial_updates() -> None:

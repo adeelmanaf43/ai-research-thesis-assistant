@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FRONTEND_APP = PROJECT_ROOT / "frontend" / "streamlit_app.py"
 PAGES_DIR = PROJECT_ROOT / "frontend" / "pages"

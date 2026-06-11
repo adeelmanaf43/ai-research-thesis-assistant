@@ -6,7 +6,12 @@ import pytest
 from sqlalchemy.orm import Session
 
 from backend.app.core.config import Settings
-from backend.app.core.database import create_database_engine, get_db, get_session_factory, init_database
+from backend.app.core.database import (
+    create_database_engine,
+    get_db,
+    get_session_factory,
+    init_database,
+)
 from backend.app.main import create_app
 
 
@@ -33,7 +38,9 @@ def _session_factory(workspace_tmp_path: Path, database_path: Path):
 
 @pytest.fixture
 def project_api_client(workspace_tmp_path: Path, project_api_database_path: Path):
-    session_factory, database_engine = _session_factory(workspace_tmp_path, project_api_database_path)
+    session_factory, database_engine = _session_factory(
+        workspace_tmp_path, project_api_database_path
+    )
     test_app = create_app()
 
     def override_get_db() -> Generator[Session, None, None]:

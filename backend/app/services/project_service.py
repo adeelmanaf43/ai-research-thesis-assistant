@@ -45,4 +45,3 @@ def update_project(db: Session, project: Project, project_in: ProjectUpdate) -> 
 def delete_project(db: Session, project: Project) -> None:
     db.delete(project)
     db.commit()
-

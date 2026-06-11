@@ -1,6 +1,5 @@
 import streamlit as st
 
-
 APP_TITLE = "AI Research / Thesis Assistant"
 PRODUCT_DESCRIPTION = (
     "A local-first research workspace for students, thesis writers, academic "

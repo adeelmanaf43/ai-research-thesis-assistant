@@ -102,6 +102,19 @@ The health endpoint test uses `httpx` against the FastAPI ASGI app directly, so 
 
 Project CRUD API tests also use `httpx` against an in-memory ASGI client, but they override the database dependency with a temporary SQLite database under `data/test_tmp`. They do not write project test records into the real local database at `data/app.db`.
 
+## Quality Checks
+
+```powershell
+python -m ruff check .
+python -m black --check --workers 1 backend frontend
+```
+
+Format Python files:
+
+```powershell
+python -m black --workers 1 backend frontend
+```
+
 ## Document Storage Foundation
 
 Document files will be stored under the configured `UPLOAD_DIR` using this project-scoped structure:

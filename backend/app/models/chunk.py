@@ -23,4 +23,3 @@ class Chunk(Base):
     page_end: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     document: Mapped[Document] = relationship(back_populates="chunks")
-

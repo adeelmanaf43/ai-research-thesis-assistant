@@ -6,11 +6,11 @@ This roadmap keeps the AI Research / Thesis Assistant local-first, lightweight, 
 
 Goal: create a clean, testable, documented base that can be committed and tagged.
 
-- Day 1: repository structure, environment files, backend/frontend/docs folders, README skeleton, and roadmap
-- Day 2: backend app factory, configuration loading, and health endpoint
-- Day 3: SQLite foundation and initial persistence boundaries
-- Day 4: Streamlit frontend shell and local developer workflow
-- Day 5: testing, documentation pass, milestone review, commit, and tag
+- Day 1: repository structure, environment files, backend/frontend/docs folders, README skeleton, roadmap, backend skeleton, health endpoint, Streamlit shell, and pytest baseline
+- Day 2: robust settings management, SQLAlchemy SQLite foundation, base ORM models, and starter schemas
+- Day 3: project CRUD service layer, FastAPI project routes, validation schemas, API tests, and endpoint documentation
+- Day 4: safe document storage helpers, document service foundation, PDF-only upload API, upload validation tests, and storage security notes
+- Day 5: development tooling, quality commands, learning notes, portfolio README, validation review, commit, and tag
 
 ## Week 2: Document Intake Foundation
 
@@ -89,4 +89,3 @@ Goal: make the project easy to demo, explain, and maintain.
 - No hardcoded secrets.
 - No auth, payments, Docker, or SaaS complexity in the MVP.
 - Every meaningful feature needs tests and documentation.
-

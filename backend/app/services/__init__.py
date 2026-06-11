@@ -1,5 +1,13 @@
 """Domain service boundary for application workflows."""
 
+from backend.app.services.document_service import (
+    DocumentStorageError,
+    SavedDocumentFile,
+    create_document_record,
+    list_documents_by_project,
+    save_uploaded_file,
+    update_document_status,
+)
 from backend.app.services.document_storage import (
     UnsafeStoragePathError,
     build_stored_document_filename,
@@ -8,14 +16,6 @@ from backend.app.services.document_storage import (
     get_document_storage_path,
     get_project_documents_dir,
     sanitize_upload_filename,
-)
-from backend.app.services.document_service import (
-    DocumentStorageError,
-    SavedDocumentFile,
-    create_document_record,
-    list_documents_by_project,
-    save_uploaded_file,
-    update_document_status,
 )
 from backend.app.services.project_service import (
     create_project,

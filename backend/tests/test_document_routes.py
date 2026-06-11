@@ -6,7 +6,12 @@ import pytest
 from sqlalchemy.orm import Session
 
 from backend.app.core.config import Settings, get_settings
-from backend.app.core.database import create_database_engine, get_db, get_session_factory, init_database
+from backend.app.core.database import (
+    create_database_engine,
+    get_db,
+    get_session_factory,
+    init_database,
+)
 from backend.app.main import create_app
 from backend.app.models.document import Document
 from backend.app.schemas.project import ProjectCreate

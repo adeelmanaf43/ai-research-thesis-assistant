@@ -28,10 +28,11 @@ class Document(Base):
     page_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     word_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="created")
-    uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    uploaded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     project: Mapped[Project] = relationship(back_populates="documents")
     chunks: Mapped[list[Chunk]] = relationship(back_populates="document")
     analyses: Mapped[list[Analysis]] = relationship(back_populates="document")
     chat_history: Mapped[list[ChatHistory]] = relationship(back_populates="document")
-

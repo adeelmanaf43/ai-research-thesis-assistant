@@ -21,4 +21,3 @@ def health_check() -> HealthResponse:
 @router.get("/api/v1/health", response_model=HealthResponse)
 def versioned_health_check() -> HealthResponse:
     return health_check()
-

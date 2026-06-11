@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -58,7 +57,7 @@ def test_backend_readme_documents_project_api_examples() -> None:
     readme = (PROJECT_ROOT / "backend/README.md").read_text(encoding="utf-8")
 
     assert "Project API Examples" in readme
-    assert 'Method Post' in readme
+    assert "Method Post" in readme
     assert "/api/projects" in readme
     assert "201 Created" in readme
     assert "204 No Content" in readme

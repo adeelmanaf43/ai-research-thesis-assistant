@@ -33,4 +33,3 @@ class Project(Base):
     documents: Mapped[list[Document]] = relationship(back_populates="project")
     analyses: Mapped[list[Analysis]] = relationship(back_populates="project")
     chat_history: Mapped[list[ChatHistory]] = relationship(back_populates="project")
-

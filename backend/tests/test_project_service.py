@@ -49,7 +49,9 @@ def test_create_project_persists_project_without_login(workspace_tmp_path: Path)
     database_engine.dispose()
 
 
-def test_list_projects_returns_newest_first_and_can_filter_by_user(workspace_tmp_path: Path) -> None:
+def test_list_projects_returns_newest_first_and_can_filter_by_user(
+    workspace_tmp_path: Path,
+) -> None:
     session_factory, database_engine = _session_factory(workspace_tmp_path)
 
     with session_factory() as session:
@@ -126,4 +128,3 @@ def test_delete_project_removes_project(workspace_tmp_path: Path) -> None:
         assert remaining is None
 
     database_engine.dispose()
-

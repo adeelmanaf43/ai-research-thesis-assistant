@@ -6,7 +6,6 @@ from backend.app.core.config import Settings
 from backend.app.core.database import create_database_engine, get_session_factory, init_database
 from backend.app.models import Analysis, ChatHistory, Chunk, Document, Project, User
 
-
 EXPECTED_TABLES = {
     "analyses",
     "chat_history",
@@ -31,13 +30,17 @@ def _settings_for_database(workspace_tmp_path: Path, filename: str) -> Settings:
 
 
 def test_model_import_boundary_registers_expected_tables() -> None:
-    table_names = {model.__tablename__ for model in (Analysis, ChatHistory, Chunk, Document, Project, User)}
+    table_names = {
+        model.__tablename__ for model in (Analysis, ChatHistory, Chunk, Document, Project, User)
+    }
 
     assert table_names == EXPECTED_TABLES
 
 
 def test_base_models_create_tables_without_business_workflows(workspace_tmp_path: Path) -> None:
-    database_engine = create_database_engine(_settings_for_database(workspace_tmp_path, "models.db"))
+    database_engine = create_database_engine(
+        _settings_for_database(workspace_tmp_path, "models.db")
+    )
 
     init_database(database_engine)
     table_names = set(inspect(database_engine).get_table_names())
@@ -61,7 +64,9 @@ def test_mvp_project_document_graph_can_exist_without_login(workspace_tmp_path: 
             file_path="data/uploads/paper.pdf",
             mime_type="application/pdf",
         )
-        chunk = Chunk(document=document, chunk_index=0, text="A source-grounded chunk.", word_count=4)
+        chunk = Chunk(
+            document=document, chunk_index=0, text="A source-grounded chunk.", word_count=4
+        )
         analysis = Analysis(
             project=project,
             document=document,

@@ -28,4 +28,3 @@ class DocumentResponse(BaseModel):
     word_count: int | None = None
     status: str
     uploaded_at: datetime
-

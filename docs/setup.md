@@ -44,6 +44,19 @@ pip install -r backend/requirements.txt
 .\.venv\Scripts\python.exe -m pytest
 ```
 
+## Run Quality Checks
+
+```powershell
+.\.venv\Scripts\python.exe -m ruff check .
+.\.venv\Scripts\python.exe -m black --check --workers 1 backend frontend
+```
+
+Use Black to format Python files when needed:
+
+```powershell
+.\.venv\Scripts\python.exe -m black --workers 1 backend frontend
+```
+
 ## Run Backend
 
 ```powershell

@@ -18,7 +18,9 @@ class Analysis(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
-    document_id: Mapped[int | None] = mapped_column(ForeignKey("documents.id"), nullable=True, index=True)
+    document_id: Mapped[int | None] = mapped_column(
+        ForeignKey("documents.id"), nullable=True, index=True
+    )
     analysis_type: Mapped[str] = mapped_column(String(80))
     title: Mapped[str | None] = mapped_column(String(200), nullable=True)
     content: Mapped[str] = mapped_column(Text)
@@ -27,4 +29,3 @@ class Analysis(Base):
 
     project: Mapped[Project] = relationship(back_populates="analyses")
     document: Mapped[Document | None] = relationship(back_populates="analyses")
-

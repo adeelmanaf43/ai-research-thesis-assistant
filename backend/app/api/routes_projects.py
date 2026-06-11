@@ -2,7 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from backend.app.core.database import get_db
-from backend.app.schemas.project import ProjectCreate, ProjectDetailResponse, ProjectListItem, ProjectUpdate
+from backend.app.schemas.project import (
+    ProjectCreate,
+    ProjectDetailResponse,
+    ProjectListItem,
+    ProjectUpdate,
+)
 from backend.app.services.project_service import (
     create_project,
     delete_project,
@@ -15,7 +20,9 @@ router = APIRouter(prefix="/api/projects", tags=["projects"])
 
 
 @router.post("", response_model=ProjectDetailResponse, status_code=status.HTTP_201_CREATED)
-def create_project_route(project_in: ProjectCreate, db: Session = Depends(get_db)) -> ProjectDetailResponse:
+def create_project_route(
+    project_in: ProjectCreate, db: Session = Depends(get_db)
+) -> ProjectDetailResponse:
     return create_project(db, project_in)
 
 

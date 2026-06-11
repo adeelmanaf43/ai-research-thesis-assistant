@@ -1,7 +1,6 @@
-from pathlib import Path, PurePosixPath
 import re
+from pathlib import Path, PurePosixPath
 from uuid import uuid4
-
 
 SAFE_FILENAME_PATTERN = re.compile(r"[^A-Za-z0-9._-]+")
 MAX_STEM_LENGTH = 120

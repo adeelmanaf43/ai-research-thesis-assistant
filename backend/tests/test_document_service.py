@@ -47,7 +47,9 @@ def test_save_uploaded_file_writes_to_project_document_directory(workspace_tmp_p
     assert saved_file.file_path.exists()
     assert saved_file.file_path.read_bytes() == b"local document bytes"
     assert saved_file.file_size_bytes == len(b"local document bytes")
-    assert saved_file.file_path.parent == (upload_dir / "projects" / "5" / "documents").resolve(strict=False)
+    assert saved_file.file_path.parent == (upload_dir / "projects" / "5" / "documents").resolve(
+        strict=False
+    )
 
 
 def test_create_document_record_persists_saved_file_metadata(workspace_tmp_path: Path) -> None:
@@ -131,8 +133,12 @@ def test_list_documents_by_project_returns_only_project_documents(workspace_tmp_
         first_project = create_project(session, ProjectCreate(name="First"))
         second_project = create_project(session, ProjectCreate(name="Second"))
 
-        first_saved_file = save_uploaded_file(settings.upload_dir, first_project.id, "first.pdf", b"first")
-        second_saved_file = save_uploaded_file(settings.upload_dir, second_project.id, "second.pdf", b"second")
+        first_saved_file = save_uploaded_file(
+            settings.upload_dir, first_project.id, "first.pdf", b"first"
+        )
+        second_saved_file = save_uploaded_file(
+            settings.upload_dir, second_project.id, "second.pdf", b"second"
+        )
         create_document_record(
             session,
             DocumentCreate(project_id=first_project.id, original_filename="first.pdf"),

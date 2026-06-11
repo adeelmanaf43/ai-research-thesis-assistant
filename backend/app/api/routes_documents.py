@@ -6,9 +6,12 @@ from sqlalchemy.orm import Session
 from backend.app.core.config import Settings, get_settings
 from backend.app.core.database import get_db
 from backend.app.schemas.document import DocumentCreate, DocumentResponse
-from backend.app.services.document_service import DocumentStorageError, create_document_record, save_uploaded_file
+from backend.app.services.document_service import (
+    DocumentStorageError,
+    create_document_record,
+    save_uploaded_file,
+)
 from backend.app.services.project_service import get_project_by_id
-
 
 PDF_CONTENT_TYPES = {"application/pdf", "application/x-pdf"}
 

@@ -52,12 +52,18 @@ def test_ensure_project_documents_dir_creates_directory(workspace_tmp_path: Path
     assert documents_dir.is_dir()
 
 
-def test_get_document_storage_path_stays_inside_project_documents_dir(workspace_tmp_path: Path) -> None:
+def test_get_document_storage_path_stays_inside_project_documents_dir(
+    workspace_tmp_path: Path,
+) -> None:
     upload_dir = workspace_tmp_path / "uploads"
 
-    storage_path = get_document_storage_path(upload_dir, project_id=3, stored_filename="../../paper.pdf")
+    storage_path = get_document_storage_path(
+        upload_dir, project_id=3, stored_filename="../../paper.pdf"
+    )
 
-    assert storage_path == (upload_dir / "projects" / "3" / "documents" / "paper.pdf").resolve(strict=False)
+    assert storage_path == (upload_dir / "projects" / "3" / "documents" / "paper.pdf").resolve(
+        strict=False
+    )
 
 
 def test_storage_helpers_reject_invalid_project_id(workspace_tmp_path: Path) -> None:
