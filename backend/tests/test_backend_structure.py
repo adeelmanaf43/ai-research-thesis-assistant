@@ -25,6 +25,7 @@ def test_backend_requirements_are_local_first() -> None:
     assert "fastapi" in requirements
     assert "uvicorn" in requirements
     assert "python-dotenv" in requirements
+    assert "python-multipart" in requirements
     assert "openai" not in requirements.lower()
     assert "anthropic" not in requirements.lower()
 
@@ -37,6 +38,7 @@ def test_backend_readme_documents_hour_four_commands() -> None:
     assert "pip install -r requirements-dev.txt" in readme
     assert "python -m uvicorn backend.app.main:app --reload" in readme
     assert "python -m pytest backend/tests/test_health_api.py" in readme
+    assert "python -m pytest backend/tests/test_document_routes.py" in readme
     assert "http://127.0.0.1:8000/health" in readme
 
 
@@ -72,6 +74,24 @@ def test_backend_readme_documents_document_storage_foundation() -> None:
     assert "documents/" in readme
     assert "document_storage.py" in readme
     assert "sanitize_upload_filename()" in readme
+
+
+def test_backend_readme_documents_document_service_foundation() -> None:
+    readme = (PROJECT_ROOT / "backend/README.md").read_text(encoding="utf-8")
+
+    assert "Document Service Foundation" in readme
+    assert "document_service.py" in readme
+    assert "save_uploaded_file()" in readme
+    assert "create_document_record()" in readme
+    assert "update_document_status()" in readme
+    assert "list_documents_by_project()" in readme
+    assert "Document Upload API" in readme
+    assert "small fake file bytes" in readme
+    assert "Security notes" in readme
+    assert "Path traversal attempts" in readme
+    assert "file_path" in readme
+    assert "stored_filename" in readme
+    assert "data/uploads/" in readme
 
 
 def test_pytest_config_points_to_backend_tests() -> None:

@@ -19,13 +19,14 @@ Included now:
 - Project CRUD service layer and FastAPI routes
 - Isolated API tests for project endpoints using temporary SQLite databases
 - Safe document storage path helpers under `uploads/projects/{project_id}/documents/`
+- Document service placeholders for saving files, creating records, status updates, and project-scoped document fetches
+- PDF-only document upload API with project existence, extension, content type, and size validation
 - Pytest setup and foundation tests
 - Documentation starter set
 
 Not included yet:
 
 - PDF extraction
-- Document upload API
 - LLM providers
 - RAG/retrieval
 - Report export
@@ -69,6 +70,12 @@ List local projects:
 Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/projects"
 ```
 
+Upload a PDF document to a project:
+
+```powershell
+curl.exe -X POST "http://127.0.0.1:8000/api/projects/1/documents" -F "file=@sample_data\example.pdf;type=application/pdf"
+```
+
 Run the frontend:
 
 ```powershell
@@ -93,4 +100,4 @@ sample_data/
 data/
 ```
 
-See [project-roadmap.md](project-roadmap.md), [docs/setup.md](docs/setup.md), [docs/architecture.md](docs/architecture.md), [docs/api.md](docs/api.md), [docs/day1_validation.md](docs/day1_validation.md), [docs/day2_validation.md](docs/day2_validation.md), and [docs/day3_validation.md](docs/day3_validation.md) for more detail.
+See [project-roadmap.md](project-roadmap.md), [docs/setup.md](docs/setup.md), [docs/architecture.md](docs/architecture.md), [docs/api.md](docs/api.md), [docs/day1_validation.md](docs/day1_validation.md), [docs/day2_validation.md](docs/day2_validation.md), [docs/day3_validation.md](docs/day3_validation.md), and [docs/day4_validation.md](docs/day4_validation.md) for more detail.

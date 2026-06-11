@@ -17,6 +17,7 @@ def test_hour_one_root_structure_exists() -> None:
         "docs/day1_validation.md",
         "docs/day2_validation.md",
         "docs/day3_validation.md",
+        "docs/day4_validation.md",
     ]
 
     for relative_path in required_paths:
@@ -27,8 +28,18 @@ def test_env_example_is_local_first_and_secret_free() -> None:
     env_example = (PROJECT_ROOT / ".env.example").read_text(encoding="utf-8")
 
     assert "DATABASE_URL=sqlite:///" in env_example
+    assert "MAX_UPLOAD_FILE_SIZE_BYTES=" in env_example
     assert "API_KEY" not in env_example
     assert "SECRET" not in env_example
+
+
+def test_gitignore_excludes_generated_upload_contents() -> None:
+    gitignore = (PROJECT_ROOT / ".gitignore").read_text(encoding="utf-8")
+
+    assert "data/*" in gitignore
+    assert "!data/uploads/" in gitignore
+    assert "data/uploads/*" in gitignore
+    assert "!data/uploads/.gitkeep" in gitignore
 
 
 def test_roadmap_documents_local_first_guardrails() -> None:
@@ -45,6 +56,7 @@ def test_docs_do_not_hardcode_local_machine_paths() -> None:
         PROJECT_ROOT / "backend" / "README.md",
         PROJECT_ROOT / "docs" / "day1_validation.md",
         PROJECT_ROOT / "docs" / "day3_validation.md",
+        PROJECT_ROOT / "docs" / "day4_validation.md",
         PROJECT_ROOT / "docs" / "setup.md",
     ]
 
@@ -60,7 +72,9 @@ def test_readme_reflects_current_day_four_storage_milestone() -> None:
     assert "Week 1, Day 4: File storage foundation for documents." in readme
     assert "Project CRUD service layer and FastAPI routes" in readme
     assert "Safe document storage path helpers" in readme
-    assert "Document upload API" in readme
+    assert "Document service placeholders" in readme
+    assert "PDF-only document upload API" in readme
+    assert "docs/day4_validation.md" in readme
     assert "Invoke-WebRequest" in readme
     assert "/api/projects" in readme
 
@@ -72,5 +86,16 @@ def test_api_docs_include_project_endpoint_examples() -> None:
     assert "GET /api/projects" in api_docs
     assert "PATCH /api/projects/{project_id}" in api_docs
     assert "DELETE /api/projects/{project_id}" in api_docs
+    assert "POST /api/projects/{project_id}/documents" in api_docs
     assert "422 Unprocessable Entity" in api_docs
     assert "No document upload yet" not in api_docs
+
+
+def test_day_four_validation_documents_upload_security() -> None:
+    validation_doc = (PROJECT_ROOT / "docs" / "day4_validation.md").read_text(encoding="utf-8")
+
+    assert "Week 1 Day 4 Validation" in validation_doc
+    assert "POST /api/projects/{project_id}/documents" in validation_doc
+    assert "Filename sanitization" in validation_doc
+    assert "Path traversal" in validation_doc
+    assert "Generated files under `data/uploads/` are ignored by Git" in validation_doc

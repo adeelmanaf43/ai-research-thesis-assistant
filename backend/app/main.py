@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from backend.app.api.health import router as health_router
+from backend.app.api.routes_documents import router as documents_router
 from backend.app.api.routes_projects import router as projects_router
 from backend.app.core.config import get_settings
 from backend.app.core.database import init_database
@@ -26,6 +27,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(projects_router)
+    app.include_router(documents_router)
 
     @app.get("/", tags=["root"])
     def root() -> dict[str, str]:

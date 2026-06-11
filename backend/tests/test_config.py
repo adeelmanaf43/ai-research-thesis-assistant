@@ -15,6 +15,7 @@ def test_settings_load_defaults() -> None:
     assert settings.database_url.startswith("sqlite:///")
     assert "\\" not in settings.database_url
     assert settings.provider_mode == "local"
+    assert settings.max_upload_file_size_bytes == 25 * 1024 * 1024
     assert settings.data_dir.is_absolute()
     assert settings.upload_dir.is_absolute()
     assert settings.export_dir.is_absolute()
@@ -47,6 +48,7 @@ def test_settings_load_environment_overrides(monkeypatch) -> None:
     monkeypatch.setenv("EXPORT_DIR", "custom_exports")
     monkeypatch.setenv("DATABASE_URL", "sqlite:///custom_data/test.db")
     monkeypatch.setenv("PROVIDER_MODE", "ollama")
+    monkeypatch.setenv("MAX_UPLOAD_FILE_SIZE_BYTES", "1024")
 
     settings = Settings.from_env()
 
@@ -58,6 +60,7 @@ def test_settings_load_environment_overrides(monkeypatch) -> None:
     assert settings.database_url.startswith("sqlite:///")
     assert settings.database_url.endswith("custom_data/test.db")
     assert settings.provider_mode == "ollama"
+    assert settings.max_upload_file_size_bytes == 1024
 
 
 def test_settings_reject_invalid_database_url(monkeypatch) -> None:
@@ -80,3 +83,14 @@ def test_settings_reject_empty_provider_mode(monkeypatch) -> None:
         assert "PROVIDER_MODE cannot be empty" in str(exc)
     else:
         raise AssertionError("Expected ValueError for empty PROVIDER_MODE")
+
+
+def test_settings_reject_invalid_upload_size(monkeypatch) -> None:
+    monkeypatch.setenv("MAX_UPLOAD_FILE_SIZE_BYTES", "0")
+
+    try:
+        Settings.from_env()
+    except ValueError as exc:
+        assert "MAX_UPLOAD_FILE_SIZE_BYTES must be a positive integer" in str(exc)
+    else:
+        raise AssertionError("Expected ValueError for invalid MAX_UPLOAD_FILE_SIZE_BYTES")

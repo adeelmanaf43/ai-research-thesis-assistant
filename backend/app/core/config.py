@@ -15,6 +15,7 @@ DEFAULT_APP_NAME = "AI Research / Thesis Assistant"
 DEFAULT_APP_VERSION = "0.1.0"
 DEFAULT_ENVIRONMENT = "local"
 DEFAULT_PROVIDER_MODE = "local"
+DEFAULT_MAX_UPLOAD_FILE_SIZE_BYTES = 25 * 1024 * 1024
 SQLITE_PREFIX = "sqlite:///"
 
 
@@ -54,6 +55,19 @@ def _provider_mode_from_env() -> str:
     return provider_mode
 
 
+def _positive_int_from_env(name: str, default: int) -> int:
+    raw_value = os.getenv(name)
+    if raw_value is None:
+        return default
+    try:
+        value = int(raw_value)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be a positive integer.") from exc
+    if value < 1:
+        raise ValueError(f"{name} must be a positive integer.")
+    return value
+
+
 @dataclass(frozen=True)
 class Settings:
     app_name: str
@@ -64,6 +78,7 @@ class Settings:
     export_dir: Path
     database_url: str
     provider_mode: str
+    max_upload_file_size_bytes: int = DEFAULT_MAX_UPLOAD_FILE_SIZE_BYTES
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -82,6 +97,10 @@ class Settings:
             export_dir=export_dir,
             database_url=_database_url_from_env(data_dir),
             provider_mode=_provider_mode_from_env(),
+            max_upload_file_size_bytes=_positive_int_from_env(
+                "MAX_UPLOAD_FILE_SIZE_BYTES",
+                DEFAULT_MAX_UPLOAD_FILE_SIZE_BYTES,
+            ),
         )
 
     def ensure_local_directories(self) -> None:

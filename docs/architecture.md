@@ -41,10 +41,18 @@ Project CRUD behavior starts in `backend/app/services/project_service.py`. Route
 
 Document storage path behavior starts in `backend/app/services/document_storage.py`. File storage helpers keep uploaded document paths inside the configured upload directory and use the structure `uploads/projects/{project_id}/documents/`.
 
+Document persistence behavior starts in `backend/app/services/document_service.py`. It provides service-layer functions for saving supplied file bytes, creating document database records, updating document status, and fetching documents by project.
+
 ## Project API
 
 Project routes live in `backend/app/api/routes_projects.py` and are mounted under `/api/projects`. They remain thin FastAPI handlers over the project service layer.
 
+## Document API
+
+Document upload routes live in `backend/app/api/routes_documents.py` and are mounted under `/api/projects/{project_id}/documents`. The Hour 3 upload route validates project existence, PDF extension, provided content type, and configured file size before calling document services.
+
 ## Document Storage Boundary
 
-The storage foundation does not accept uploads yet. It only defines safe local path helpers for future upload endpoints. Filenames are sanitized before storage, project IDs must be positive integers, and resolved paths are checked so path traversal cannot escape the configured upload directory.
+The storage foundation defines safe local path helpers used by the upload endpoint. Filenames are sanitized before storage, project IDs must be positive integers, and resolved paths are checked so path traversal cannot escape the configured upload directory.
+
+The document upload API can save PDF bytes and create document metadata records, but it does not extract text, count pages, or run analysis yet.

@@ -28,6 +28,7 @@ Core configuration defaults:
 - `UPLOAD_DIR=data/uploads`
 - `EXPORT_DIR=data/exports`
 - `PROVIDER_MODE=local`
+- `MAX_UPLOAD_FILE_SIZE_BYTES=26214400`
 
 Database runtime uses SQLAlchemy with SQLite. No external database server is required.
 
