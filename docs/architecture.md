@@ -43,6 +43,8 @@ Document storage path behavior starts in `backend/app/services/document_storage.
 
 Document persistence behavior starts in `backend/app/services/document_service.py`. It provides service-layer functions for saving supplied file bytes, creating document database records, updating document status, and fetching documents by project.
 
+PDF text extraction starts in `backend/app/services/document_extraction.py`. It uses PyMuPDF locally to return page count, basic PDF metadata, a per-page text list, combined text, and a safe `has_text` flag. This service is intentionally separate from upload routes so extraction can be tested and evolved without making file upload brittle.
+
 ## Project API
 
 Project routes live in `backend/app/api/routes_projects.py` and are mounted under `/api/projects`. They remain thin FastAPI handlers over the project service layer.
@@ -55,4 +57,4 @@ Document upload routes live in `backend/app/api/routes_documents.py` and are mou
 
 The storage foundation defines safe local path helpers used by the upload endpoint. Filenames are sanitized before storage, project IDs must be positive integers, and resolved paths are checked so path traversal cannot escape the configured upload directory.
 
-The document upload API can save PDF bytes and create document metadata records, but it does not extract text, count pages, or run analysis yet.
+The document upload API saves PDF bytes, creates document metadata records, then attempts local extraction. Successful extraction updates page count, word count, and status. Failed extraction keeps the upload successful and stores an extraction error. Very low extracted text is marked `ocr_needed` so scanned or empty PDFs can be flagged without requiring OCR yet. Text cleaning, chunking, and analysis are still later Week 2 steps.

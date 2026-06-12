@@ -85,7 +85,7 @@ Week 2 should begin document intake and local text processing without adding AI 
 
 Recommended sequence:
 
-1. Add local PDF text extraction service.
+1. Wire local PDF text extraction into the document processing workflow.
 2. Detect empty, unreadable, or likely scanned PDFs and return clear status messages.
 3. Store page count, word count, and extraction status in document metadata.
 4. Add text cleaning helpers with deterministic tests.
@@ -103,3 +103,24 @@ Recommended sequence:
 ## Interview Summary
 
 Week 1 proves the project is being built like a real product instead of a one-file demo. The foundation separates API routes, services, schemas, models, configuration, database setup, and tests. It also protects local user files with safe storage paths and avoids paid or cloud dependencies. This makes the future AI features easier to add because the core app already has reliable boundaries, documentation, and validation.
+
+## Week 2 Day 1 Update
+
+Week 2 Day 1 added the local PDF text extraction foundation.
+
+Completed:
+
+- Added PyMuPDF as the local PDF extraction dependency.
+- Added `backend/app/services/document_extraction.py` for page text, page count, metadata, and safe extraction errors.
+- Connected upload processing to extraction after local save.
+- Updated document metadata with `page_count`, `word_count`, `status`, and `extraction_error`.
+- Added `ocr_needed` status for empty or very low-text PDFs.
+- Added tests for generated PDFs, mocked extraction, invalid paths, invalid PDF bytes, upload success, extraction failure, and OCR-needed detection.
+
+Still not included:
+
+- OCR processing
+- Text cleaning
+- Section detection
+- Chunking
+- Search, Q&A, summaries, comparison, or export

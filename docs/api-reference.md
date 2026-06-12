@@ -1,6 +1,6 @@
 # API Reference
 
-This reference documents the current Week 1 API surface for the local-first AI Research / Thesis Assistant. The API works without paid API keys, cloud providers, Docker, authentication, or mandatory Ollama.
+This reference documents the current Week 2 API surface for the local-first AI Research / Thesis Assistant. The API works without paid API keys, cloud providers, Docker, authentication, or mandatory Ollama.
 
 Base URL for local development:
 
@@ -81,7 +81,7 @@ Expected status: `200 OK`
 
 ## Projects
 
-Project endpoints manage local research workspaces. Authentication is intentionally not required in the Week 1 foundation.
+Project endpoints manage local research workspaces. Authentication is intentionally not required in the current local-first foundation.
 
 ### `POST /api/projects`
 
@@ -214,7 +214,7 @@ Expected status:
 
 ## Documents
 
-Document endpoints currently support PDF upload and metadata storage only. They do not extract, parse, summarize, search, or analyze document content yet.
+Document endpoints currently support PDF upload, metadata storage, and local PyMuPDF extraction. They do not clean, chunk, summarize, search, or analyze document content yet.
 
 ### `POST /api/projects/{project_id}/documents`
 
@@ -241,9 +241,10 @@ Example response:
   "original_filename": "invoice_GAF-175351693.pdf",
   "mime_type": "application/pdf",
   "file_size_bytes": 1024,
-  "page_count": null,
-  "word_count": null,
-  "status": "stored",
+  "page_count": 1,
+  "word_count": 120,
+  "status": "extracted",
+  "extraction_error": null,
   "uploaded_at": "2026-06-11T10:00:00"
 }
 ```
@@ -258,6 +259,14 @@ Expected status:
 - `422 Unprocessable Entity` when the multipart `file` field is missing.
 - `500 Internal Server Error` when local storage fails.
 
+Extraction behavior:
+
+- Valid PDFs are parsed locally with PyMuPDF after saving.
+- Successful extraction sets `status` to `extracted`, populates `page_count`, and populates `word_count`.
+- PDFs that save successfully but cannot be parsed still return `201 Created`.
+- Extraction failures set `status` to `extraction_failed` and return `extraction_error`.
+- PDFs with very little extractable text use `status` value `ocr_needed` and return an OCR warning in `extraction_error`.
+
 Response boundary:
 
 - `file_path` is intentionally not exposed.
@@ -267,12 +276,25 @@ Response boundary:
 
 ## Known Limitations
 
-- No PDF text extraction yet.
-- No OCR or scanned PDF handling yet.
-- No page count or word count calculation yet.
+- No OCR processing for scanned PDFs yet.
+- No text cleaning, section detection, or chunking yet.
 - No search, retrieval, RAG, Q&A, summaries, comparison, or export yet.
 - No auth or permissions layer yet.
 - No Ollama or cloud provider calls yet.
-- Upload validation checks extension, provided content type, and configured file size; it does not inspect PDF internals yet.
+- Upload validation checks extension, provided content type, and configured file size before local extraction.
 
-These limitations are intentional for Week 1. The current API establishes a stable local-first foundation before document intelligence features are added.
+These limitations are intentional for Week 2. The current API establishes a stable local-first extraction foundation before document intelligence features are added.
+
+## Manual Smoke Test
+
+If port `8000` is already used by an old backend process, run the backend on port `8020` and verify the project and upload flow:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8020/api/projects" -Method Post -ContentType "application/json" -Body '{"name":"Thesis project","description":"Local workspace"}'
+```
+
+```powershell
+curl.exe -X POST "http://127.0.0.1:8020/api/projects/1/documents" -F "file=@sample_data\invoice_GAF-175351693.pdf;type=application/pdf"
+```
+
+The upload response should include `page_count`, `word_count`, `status`, and `extraction_error`.

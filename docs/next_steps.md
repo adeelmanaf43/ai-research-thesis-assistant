@@ -4,8 +4,8 @@ Week 1 established the professional project foundation: repository structure, Fa
 
 Suggested Week 2 sequence:
 
-1. Add local PDF text extraction without requiring Ollama or cloud APIs.
-2. Detect empty or scanned PDFs and return clear user-facing warnings.
-3. Store extracted document metadata such as page count and word count.
-4. Add deterministic text cleaning helpers with focused tests.
+1. Store extracted full text safely for later cleaning and chunking.
+2. Add deterministic text cleaning helpers with focused tests.
+3. Add section detection and chunking in service modules.
+4. Add optional OCR processing later without making it required for the MVP.
 5. Keep document processing in service modules so API routes stay thin.

@@ -6,6 +6,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 def test_hour_one_root_structure_exists() -> None:
     required_paths = [
         "backend",
+        "backend/app/services/document_extraction.py",
         "frontend",
         "docs",
         "sample_data",
@@ -18,6 +19,7 @@ def test_hour_one_root_structure_exists() -> None:
         "docs/day3_validation.md",
         "docs/day4_validation.md",
         "docs/day5_validation.md",
+        "docs/week2-day1-validation.md",
         "docs/api-reference.md",
         "docs/weekly-progress.md",
         "docs/learning-notes.md",
@@ -63,6 +65,7 @@ def test_docs_do_not_hardcode_local_machine_paths() -> None:
         PROJECT_ROOT / "docs" / "day3_validation.md",
         PROJECT_ROOT / "docs" / "day4_validation.md",
         PROJECT_ROOT / "docs" / "day5_validation.md",
+        PROJECT_ROOT / "docs" / "week2-day1-validation.md",
         PROJECT_ROOT / "docs" / "setup.md",
     ]
 
@@ -72,17 +75,20 @@ def test_docs_do_not_hardcode_local_machine_paths() -> None:
         assert "E:/portfolio-projects" not in content
 
 
-def test_readme_reflects_current_day_five_quality_milestone() -> None:
+def test_readme_reflects_current_pdf_extraction_milestone() -> None:
     readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
 
-    assert "Week 1, Day 5: Development tooling and quality baseline." in readme
+    assert "Week 2, Day 1: PDF text extraction service." in readme
     assert "Project CRUD service layer and FastAPI routes" in readme
     assert "Safe document storage path helpers" in readme
     assert "Document service placeholders" in readme
     assert "PDF-only document upload API" in readme
+    assert "Local PDF text extraction service using PyMuPDF" in readme
+    assert "ocr_needed" in readme
     assert "Ruff linting and Black formatting configuration" in readme
     assert "docs/api-reference.md" in readme
     assert "docs/weekly-progress.md" in readme
+    assert "docs/week2-day1-validation.md" in readme
     assert "docs/learning-notes.md" in readme
     assert "docs/day4_validation.md" in readme
     assert "docs/day5_validation.md" in readme
@@ -175,6 +181,8 @@ def test_weekly_progress_summarizes_week_one_and_next_steps() -> None:
         assert expected_text in weekly_progress
 
     assert "sample_data\\example.pdf" not in weekly_progress
+    assert "Week 2 Day 1 Update" in weekly_progress
+    assert "ocr_needed" in weekly_progress
 
 
 def test_day_four_validation_documents_upload_security() -> None:
@@ -230,6 +238,35 @@ def test_week_one_followup_docs_reflect_completed_foundation() -> None:
     limitations = (PROJECT_ROOT / "docs" / "known_limitations.md").read_text(encoding="utf-8")
     next_steps = (PROJECT_ROOT / "docs" / "next_steps.md").read_text(encoding="utf-8")
 
-    assert "Week 1 foundation" in limitations
+    assert "Week 2 foundation" in limitations
     assert "Week 2 sequence" in next_steps
-    assert "local PDF text extraction" in next_steps
+    assert "Store extracted full text" in next_steps
+
+
+def test_pdf_extraction_dependency_and_docs_are_present() -> None:
+    requirements = (PROJECT_ROOT / "requirements.txt").read_text(encoding="utf-8")
+    backend_requirements = (PROJECT_ROOT / "backend" / "requirements.txt").read_text(
+        encoding="utf-8"
+    )
+    architecture = (PROJECT_ROOT / "docs" / "architecture.md").read_text(encoding="utf-8")
+
+    assert "PyMuPDF" in requirements
+    assert "PyMuPDF" in backend_requirements
+    assert "document_extraction.py" in architecture
+    assert "per-page text list" in architecture
+    assert "ocr_needed" in architecture
+    assert "attempts local PyMuPDF extraction" in (PROJECT_ROOT / "README.md").read_text(
+        encoding="utf-8"
+    )
+
+
+def test_week_two_day_one_validation_documents_processing_behavior() -> None:
+    validation_doc = (PROJECT_ROOT / "docs" / "week2-day1-validation.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "Week 2 Day 1 Validation" in validation_doc
+    assert "document_extraction.py" in validation_doc
+    assert "extraction_failed" in validation_doc
+    assert "ocr_needed" in validation_doc
+    assert "PyMuPDF" in validation_doc

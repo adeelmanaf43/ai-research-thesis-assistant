@@ -35,6 +35,7 @@ class DocumentLike:
     page_count = 12
     word_count = 4500
     status = "created"
+    extraction_error = None
     uploaded_at = datetime(2026, 1, 3, tzinfo=UTC)
 
 
@@ -107,6 +108,17 @@ def test_document_metadata_update_rejects_negative_counts() -> None:
         DocumentMetadataUpdate(page_count=-1)
 
 
+def test_document_metadata_update_accepts_extraction_error() -> None:
+    schema = DocumentMetadataUpdate(
+        page_count=None,
+        word_count=None,
+        status="extraction_failed",
+        extraction_error="Could not extract text",
+    )
+
+    assert schema.extraction_error == "Could not extract text"
+
+
 def test_document_response_excludes_internal_storage_fields() -> None:
     payload = DocumentResponse.model_validate(DocumentLike()).model_dump()
 
@@ -114,5 +126,6 @@ def test_document_response_excludes_internal_storage_fields() -> None:
     assert payload["project_id"] == 1
     assert payload["original_filename"] == "paper.pdf"
     assert payload["status"] == "created"
+    assert payload["extraction_error"] is None
     assert "file_path" not in payload
     assert "stored_filename" not in payload

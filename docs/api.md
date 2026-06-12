@@ -153,9 +153,10 @@ Response:
   "original_filename": "invoice_GAF-175351693.pdf",
   "mime_type": "application/pdf",
   "file_size_bytes": 1024,
-  "page_count": null,
-  "word_count": null,
-  "status": "stored",
+  "page_count": 1,
+  "word_count": 120,
+  "status": "extracted",
+  "extraction_error": null,
   "uploaded_at": "2026-06-11T10:00:00"
 }
 ```
@@ -166,10 +167,13 @@ Validation behavior:
 - Non-`.pdf` filenames return `400 Bad Request`.
 - Non-PDF content types return `400 Bad Request` when the content type is provided.
 - Oversized files return `413 Content Too Large`.
+- Valid PDFs are saved and parsed locally with PyMuPDF to update `page_count`, `word_count`, and `status`.
+- Extraction failures do not fail the upload; the response uses `status="extraction_failed"` and includes `extraction_error`.
+- PDFs with very little extractable text use `status="ocr_needed"` and include an OCR warning in `extraction_error`.
 - Internal storage fields such as `file_path` and `stored_filename` are not exposed in the response.
 
 ## Current API Boundaries
 
-The Project and Document APIs are local-first and do not require authentication in the Week 1 MVP. Project ownership is represented by nullable `user_id` fields in the database, but login and permissions are intentionally out of scope for Day 4.
+The Project and Document APIs are local-first and do not require authentication in the current MVP. Project ownership is represented by nullable `user_id` fields in the database, but login and permissions are intentionally out of scope for the current foundation.
 
-The document upload endpoint stores the PDF and creates metadata only. It does not extract text, count pages, run search, call Ollama, call cloud APIs, or generate reports. Those workflows belong to later milestones.
+The document upload endpoint stores the PDF, creates metadata, and attempts local text extraction. It does not run search, call Ollama, call cloud APIs, summarize, or generate reports. Those workflows belong to later milestones.

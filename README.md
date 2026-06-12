@@ -2,7 +2,7 @@
 
 A local-first document intelligence web app for students, researchers, thesis writers, academic freelancers, and analysts.
 
-The project is designed to keep working without paid APIs, mandatory Ollama, or cloud services. Week 1 focuses on a professional project foundation: clean structure, configuration, tests, documentation, and a minimal working app skeleton.
+The project is designed to keep working without paid APIs, mandatory Ollama, or cloud services. The current foundation includes project management, safe PDF upload, local PDF text extraction, tests, and documentation.
 
 ## Problem
 
@@ -20,7 +20,7 @@ AI Research / Thesis Assistant is being built as a local document intelligence a
 - Keep business logic testable through service layers
 - Add deterministic tests, documentation, linting, and formatting
 
-Future milestones will add local PDF extraction, cleaning, chunking, search, source-grounded Q&A, literature matrices, comparison, and report export.
+Future milestones will add text cleaning, chunking, search, source-grounded Q&A, literature matrices, comparison, and report export.
 
 ## Architecture
 
@@ -57,12 +57,13 @@ Important boundaries:
 - Streamlit
 - SQLite
 - SQLAlchemy
+- PyMuPDF
 - Pydantic
 - Pytest
 - Ruff
 - Black
 
-No Docker, paid API key, cloud provider, auth system, or payment layer is required for the Week 1 foundation.
+No Docker, paid API key, cloud provider, auth system, or payment layer is required for the current local-first foundation.
 
 ## Setup
 
@@ -108,7 +109,7 @@ Run the frontend:
 
 ## Current Features
 
-Week 1, Day 5: Development tooling and quality baseline.
+Week 2, Day 1: PDF text extraction service.
 
 Included now:
 
@@ -123,6 +124,8 @@ Included now:
 - Safe document storage path helpers under `uploads/projects/{project_id}/documents/`
 - Document service placeholders for saving files, creating records, status updates, and project-scoped document fetches
 - PDF-only document upload API with project existence, extension, content type, and size validation
+- Local PDF text extraction service using PyMuPDF
+- Upload-time extraction metadata with page count, word count, `extracted`, `extraction_failed`, and `ocr_needed` statuses
 - Ruff linting and Black formatting configuration
 - Pytest setup and foundation tests
 - Documentation starter set
@@ -167,8 +170,10 @@ See [project-roadmap.md](project-roadmap.md) for the full staged plan.
 
 Not included yet:
 
-- PDF extraction
-- OCR or scanned PDF handling
+- OCR processing for scanned PDFs
+- Text cleaning
+- Section detection
+- Chunking
 - LLM providers
 - RAG/retrieval
 - Report export
@@ -177,7 +182,7 @@ Not included yet:
 - Docker
 - Cloud AI APIs
 
-The current upload API stores PDF bytes and document metadata only. It does not parse, summarize, or analyze document content yet.
+The current upload API stores PDF bytes, creates document metadata, and attempts local PyMuPDF extraction to populate page count, word count, status, and extraction errors. It does not summarize or analyze document content yet.
 
 ## Screenshots
 
@@ -192,4 +197,4 @@ Planned placeholders:
 
 ## Documentation
 
-See [docs/setup.md](docs/setup.md), [docs/architecture.md](docs/architecture.md), [docs/api.md](docs/api.md), [docs/api-reference.md](docs/api-reference.md), [docs/weekly-progress.md](docs/weekly-progress.md), [docs/learning-notes.md](docs/learning-notes.md), [docs/day1_validation.md](docs/day1_validation.md), [docs/day2_validation.md](docs/day2_validation.md), [docs/day3_validation.md](docs/day3_validation.md), [docs/day4_validation.md](docs/day4_validation.md), and [docs/day5_validation.md](docs/day5_validation.md) for more detail.
+See [docs/setup.md](docs/setup.md), [docs/architecture.md](docs/architecture.md), [docs/api.md](docs/api.md), [docs/api-reference.md](docs/api-reference.md), [docs/weekly-progress.md](docs/weekly-progress.md), [docs/week2-day1-validation.md](docs/week2-day1-validation.md), [docs/learning-notes.md](docs/learning-notes.md), [docs/day1_validation.md](docs/day1_validation.md), [docs/day2_validation.md](docs/day2_validation.md), [docs/day3_validation.md](docs/day3_validation.md), [docs/day4_validation.md](docs/day4_validation.md), and [docs/day5_validation.md](docs/day5_validation.md) for more detail.

@@ -100,3 +100,27 @@ def test_init_database_creates_base_model_tables(workspace_tmp_path: Path) -> No
         "projects",
         "users",
     }
+
+
+def test_init_database_creates_document_extraction_error_column(workspace_tmp_path: Path) -> None:
+    database_path = workspace_tmp_path / "extraction_schema.db"
+    settings = Settings(
+        app_name="Test App",
+        app_version="0.1.0",
+        environment="test",
+        data_dir=workspace_tmp_path,
+        upload_dir=workspace_tmp_path / "uploads",
+        export_dir=workspace_tmp_path / "exports",
+        database_url=f"sqlite:///{database_path.as_posix()}",
+        provider_mode="local",
+    )
+    database_engine = create_database_engine(settings)
+
+    init_database(database_engine)
+    document_columns = {
+        column["name"] for column in inspect(database_engine).get_columns("documents")
+    }
+
+    database_engine.dispose()
+
+    assert "extraction_error" in document_columns

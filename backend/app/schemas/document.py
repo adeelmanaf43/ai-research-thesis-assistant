@@ -14,6 +14,7 @@ class DocumentMetadataUpdate(BaseModel):
     page_count: int | None = Field(default=None, ge=0)
     word_count: int | None = Field(default=None, ge=0)
     status: str | None = Field(default=None, min_length=1, max_length=50)
+    extraction_error: str | None = None
 
 
 class DocumentResponse(BaseModel):
@@ -27,4 +28,5 @@ class DocumentResponse(BaseModel):
     page_count: int | None = None
     word_count: int | None = None
     status: str
+    extraction_error: str | None = None
     uploaded_at: datetime

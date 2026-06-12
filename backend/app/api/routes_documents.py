@@ -6,10 +6,15 @@ from sqlalchemy.orm import Session
 from backend.app.core.config import Settings, get_settings
 from backend.app.core.database import get_db
 from backend.app.schemas.document import DocumentCreate, DocumentResponse
+from backend.app.services.document_extraction import PDFExtractionError, extract_pdf_text
 from backend.app.services.document_service import (
+    OCR_NEEDED_MESSAGE,
     DocumentStorageError,
+    count_words,
     create_document_record,
+    is_ocr_likely_needed,
     save_uploaded_file,
+    update_document_extraction_metadata,
 )
 from backend.app.services.project_service import get_project_by_id
 
@@ -68,7 +73,7 @@ async def upload_document_route(
             detail="Could not save uploaded document.",
         ) from exc
 
-    return create_document_record(
+    document = create_document_record(
         db,
         DocumentCreate(
             project_id=project_id,
@@ -78,4 +83,35 @@ async def upload_document_route(
         ),
         stored_filename=saved_file.stored_filename,
         file_path=saved_file.file_path,
+    )
+
+    try:
+        extracted_pdf = extract_pdf_text(saved_file.file_path)
+    except PDFExtractionError as exc:
+        return update_document_extraction_metadata(
+            db,
+            document,
+            page_count=None,
+            word_count=None,
+            status="extraction_failed",
+            extraction_error=str(exc),
+        )
+
+    word_count = count_words(extracted_pdf.full_text)
+    if is_ocr_likely_needed(word_count):
+        return update_document_extraction_metadata(
+            db,
+            document,
+            page_count=extracted_pdf.page_count,
+            word_count=word_count,
+            status="ocr_needed",
+            extraction_error=OCR_NEEDED_MESSAGE,
+        )
+
+    return update_document_extraction_metadata(
+        db,
+        document,
+        page_count=extracted_pdf.page_count,
+        word_count=word_count,
+        status="extracted",
     )

@@ -1,6 +1,7 @@
 from collections.abc import Generator
 from pathlib import Path
 
+import fitz
 import httpx
 import pytest
 from sqlalchemy.orm import Session
@@ -15,6 +16,7 @@ from backend.app.core.database import (
 from backend.app.main import create_app
 from backend.app.models.document import Document
 from backend.app.schemas.project import ProjectCreate
+from backend.app.services.document_extraction import ExtractedPDF
 from backend.app.services.document_service import DocumentStorageError
 from backend.app.services.project_service import create_project
 
@@ -30,7 +32,7 @@ def document_api_settings(workspace_tmp_path: Path) -> Settings:
         export_dir=workspace_tmp_path / "exports",
         database_url=f"sqlite:///{(workspace_tmp_path / 'document_routes.db').as_posix()}",
         provider_mode="local",
-        max_upload_file_size_bytes=20,
+        max_upload_file_size_bytes=50_000,
     )
 
 
@@ -69,6 +71,16 @@ def _create_project(settings: Settings) -> int:
     return project_id
 
 
+def _pdf_bytes(page_text: str) -> bytes:
+    document = fitz.open()
+    page = document.new_page()
+    if page_text:
+        page.insert_text((72, 72), page_text)
+    pdf_content = document.tobytes()
+    document.close()
+    return pdf_content
+
+
 @pytest.mark.anyio
 async def test_upload_document_route_accepts_pdf_and_creates_record(
     document_api_client: httpx.AsyncClient,
@@ -90,10 +102,146 @@ async def test_upload_document_route_accepts_pdf_and_creates_record(
     assert payload["file_size_bytes"] == len(b"%PDF-1.4")
     assert payload["page_count"] is None
     assert payload["word_count"] is None
-    assert payload["status"] == "stored"
+    assert payload["status"] == "extraction_failed"
+    assert "Could not extract text from PDF" in payload["extraction_error"]
     assert "file_path" not in payload
     assert "stored_filename" not in payload
     assert len(list(document_api_settings.upload_dir.rglob("*.pdf"))) == 1
+
+
+@pytest.mark.anyio
+async def test_upload_document_route_extracts_valid_pdf_metadata(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    project_id = _create_project(document_api_settings)
+    pdf_content = _pdf_bytes(
+        "Local extraction works with enough academic text for the deterministic threshold."
+    )
+
+    async with document_api_client as client:
+        response = await client.post(
+            f"/api/projects/{project_id}/documents",
+            files={"file": ("paper.pdf", pdf_content, "application/pdf")},
+        )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["page_count"] == 1
+    assert payload["word_count"] == 11
+    assert payload["status"] == "extracted"
+    assert payload["extraction_error"] is None
+
+
+@pytest.mark.anyio
+async def test_upload_document_route_marks_low_text_pdf_as_ocr_needed(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    project_id = _create_project(document_api_settings)
+    pdf_content = _pdf_bytes("Title")
+
+    async with document_api_client as client:
+        response = await client.post(
+            f"/api/projects/{project_id}/documents",
+            files={"file": ("scanned.pdf", pdf_content, "application/pdf")},
+        )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["page_count"] == 1
+    assert payload["word_count"] == 1
+    assert payload["status"] == "ocr_needed"
+    assert "OCR" in payload["extraction_error"]
+
+
+@pytest.mark.anyio
+async def test_upload_document_route_marks_empty_pdf_as_ocr_needed(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    project_id = _create_project(document_api_settings)
+    pdf_content = _pdf_bytes("")
+
+    async with document_api_client as client:
+        response = await client.post(
+            f"/api/projects/{project_id}/documents",
+            files={"file": ("empty.pdf", pdf_content, "application/pdf")},
+        )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["page_count"] == 1
+    assert payload["word_count"] == 0
+    assert payload["status"] == "ocr_needed"
+    assert "Very little extractable text" in payload["extraction_error"]
+
+
+@pytest.mark.anyio
+async def test_upload_document_route_uses_mocked_normal_extraction(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_id = _create_project(document_api_settings)
+
+    def fake_extract_pdf_text(_: Path) -> ExtractedPDF:
+        return ExtractedPDF(
+            page_count=2,
+            metadata={"title": "Mocked"},
+            page_texts=[
+                "This mocked page contains enough words for extraction success.",
+                "This second mocked page also contributes additional words.",
+            ],
+        )
+
+    monkeypatch.setattr("backend.app.api.routes_documents.extract_pdf_text", fake_extract_pdf_text)
+
+    async with document_api_client as client:
+        response = await client.post(
+            f"/api/projects/{project_id}/documents",
+            files={
+                "file": (
+                    "mocked.pdf",
+                    b"fake bytes are enough with mocked extraction",
+                    "application/pdf",
+                )
+            },
+        )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["page_count"] == 2
+    assert payload["word_count"] == 17
+    assert payload["status"] == "extracted"
+    assert payload["extraction_error"] is None
+
+
+@pytest.mark.anyio
+async def test_upload_document_route_uses_mocked_empty_text_detection(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_id = _create_project(document_api_settings)
+
+    def fake_extract_pdf_text(_: Path) -> ExtractedPDF:
+        return ExtractedPDF(page_count=3, metadata={}, page_texts=["", " ", ""])
+
+    monkeypatch.setattr("backend.app.api.routes_documents.extract_pdf_text", fake_extract_pdf_text)
+
+    async with document_api_client as client:
+        response = await client.post(
+            f"/api/projects/{project_id}/documents",
+            files={"file": ("empty-mocked.pdf", b"fake bytes", "application/pdf")},
+        )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["page_count"] == 3
+    assert payload["word_count"] == 0
+    assert payload["status"] == "ocr_needed"
+    assert "OCR" in payload["extraction_error"]
 
 
 @pytest.mark.anyio
@@ -115,10 +263,12 @@ async def test_upload_document_route_accepts_uppercase_pdf_extension_and_x_pdf_t
     assert payload["mime_type"] == "application/x-pdf"
     assert payload["page_count"] is None
     assert payload["word_count"] is None
+    assert payload["status"] == "extraction_failed"
+    assert payload["extraction_error"]
 
 
 @pytest.mark.anyio
-async def test_upload_document_route_saves_small_fake_file_without_pdf_extraction(
+async def test_upload_document_route_saves_small_fake_file_when_extraction_fails(
     document_api_client: httpx.AsyncClient,
     document_api_settings: Settings,
 ) -> None:
@@ -136,6 +286,8 @@ async def test_upload_document_route_saves_small_fake_file_without_pdf_extractio
     assert payload["original_filename"] == "../Unsafe File Name!.pdf"
     assert payload["page_count"] is None
     assert payload["word_count"] is None
+    assert payload["status"] == "extraction_failed"
+    assert payload["extraction_error"]
 
     saved_files = list(document_api_settings.upload_dir.rglob("*.pdf"))
     assert len(saved_files) == 1
@@ -149,6 +301,8 @@ async def test_upload_document_route_saves_small_fake_file_without_pdf_extractio
         assert document is not None
         assert document.page_count is None
         assert document.word_count is None
+        assert document.status == "extraction_failed"
+        assert document.extraction_error is not None
         assert document.stored_filename.endswith("_Unsafe_File_Name.pdf")
         assert "file_path" not in payload
         assert "stored_filename" not in payload
@@ -213,7 +367,13 @@ async def test_upload_document_route_rejects_oversized_file(
     async with document_api_client as client:
         response = await client.post(
             f"/api/projects/{project_id}/documents",
-            files={"file": ("paper.pdf", b"x" * 21, "application/pdf")},
+            files={
+                "file": (
+                    "paper.pdf",
+                    b"x" * (document_api_settings.max_upload_file_size_bytes + 1),
+                    "application/pdf",
+                )
+            },
         )
 
     assert response.status_code == 413

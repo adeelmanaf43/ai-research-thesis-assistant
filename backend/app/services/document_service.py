@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -15,6 +16,11 @@ from backend.app.services.document_storage import (
 
 class DocumentStorageError(RuntimeError):
     """Raised when a document file cannot be saved locally."""
+
+
+WORD_PATTERN = re.compile(r"\b\w+\b")
+MIN_EXTRACTED_WORDS_FOR_TEXT = 10
+OCR_NEEDED_MESSAGE = "Very little extractable text was found. This PDF may be scanned or need OCR."
 
 
 @dataclass(frozen=True)
@@ -64,6 +70,38 @@ def create_document_record(
         file_size_bytes=document_in.file_size_bytes,
         status=status,
     )
+    db.add(document)
+    db.commit()
+    db.refresh(document)
+    return document
+
+
+def count_words(text: str) -> int:
+    return len(WORD_PATTERN.findall(text))
+
+
+def is_ocr_likely_needed(word_count: int) -> bool:
+    return word_count < MIN_EXTRACTED_WORDS_FOR_TEXT
+
+
+def update_document_extraction_metadata(
+    db: Session,
+    document: Document,
+    *,
+    page_count: int | None,
+    word_count: int | None,
+    status: str,
+    extraction_error: str | None = None,
+) -> Document:
+    cleaned_status = status.strip()
+    if not cleaned_status:
+        raise ValueError("Document status cannot be empty.")
+
+    document.page_count = page_count
+    document.word_count = word_count
+    document.status = cleaned_status
+    cleaned_error = extraction_error.strip() if extraction_error else ""
+    document.extraction_error = cleaned_error or None
     db.add(document)
     db.commit()
     db.refresh(document)

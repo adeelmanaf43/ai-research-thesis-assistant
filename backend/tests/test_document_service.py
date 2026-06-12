@@ -7,9 +7,13 @@ from backend.app.core.database import create_database_engine, get_session_factor
 from backend.app.schemas.document import DocumentCreate
 from backend.app.schemas.project import ProjectCreate
 from backend.app.services.document_service import (
+    MIN_EXTRACTED_WORDS_FOR_TEXT,
+    count_words,
     create_document_record,
+    is_ocr_likely_needed,
     list_documents_by_project,
     save_uploaded_file,
+    update_document_extraction_metadata,
     update_document_status,
 )
 from backend.app.services.project_service import create_project
@@ -103,6 +107,63 @@ def test_update_document_status_strips_and_persists_status(workspace_tmp_path: P
         updated = update_document_status(session, document, " processing ")
 
         assert updated.status == "processing"
+
+    database_engine.dispose()
+
+
+def test_count_words_returns_simple_local_word_count() -> None:
+    assert count_words("Local extraction works.") == 3
+    assert count_words("  ") == 0
+
+
+def test_is_ocr_likely_needed_uses_low_text_threshold() -> None:
+    assert is_ocr_likely_needed(0) is True
+    assert is_ocr_likely_needed(MIN_EXTRACTED_WORDS_FOR_TEXT - 1) is True
+    assert is_ocr_likely_needed(MIN_EXTRACTED_WORDS_FOR_TEXT) is False
+
+
+def test_update_document_extraction_metadata_persists_counts_and_error(
+    workspace_tmp_path: Path,
+) -> None:
+    session_factory, database_engine, settings = _session_factory(workspace_tmp_path)
+
+    with session_factory() as session:
+        project = create_project(session, ProjectCreate(name="Extraction project"))
+        saved_file = save_uploaded_file(settings.upload_dir, project.id, "paper.pdf", b"content")
+        document = create_document_record(
+            session,
+            DocumentCreate(project_id=project.id, original_filename="paper.pdf"),
+            saved_file.stored_filename,
+            saved_file.file_path,
+        )
+
+        updated = update_document_extraction_metadata(
+            session,
+            document,
+            page_count=2,
+            word_count=120,
+            status=" extracted ",
+            extraction_error=" ",
+        )
+
+        assert updated.page_count == 2
+        assert updated.word_count == 120
+        assert updated.status == "extracted"
+        assert updated.extraction_error is None
+
+        failed = update_document_extraction_metadata(
+            session,
+            updated,
+            page_count=None,
+            word_count=None,
+            status="extraction_failed",
+            extraction_error="Could not extract text",
+        )
+
+        assert failed.page_count is None
+        assert failed.word_count is None
+        assert failed.status == "extraction_failed"
+        assert failed.extraction_error == "Could not extract text"
 
     database_engine.dispose()
 

@@ -2,7 +2,7 @@
 
 FastAPI backend foundation for the AI Research / Thesis Assistant.
 
-This backend is local-first. It uses SQLite-ready configuration and does not require paid API keys, cloud providers, Ollama, Docker, authentication, or payment services for the Week 1 foundation.
+This backend is local-first. It uses SQLite-ready configuration and does not require paid API keys, cloud providers, Ollama, Docker, authentication, or payment services for the current foundation.
 
 ## Create Virtual Environment
 
@@ -143,10 +143,11 @@ The document service foundation adds functions in `backend/app/services/document
 
 - `save_uploaded_file()` writes provided file bytes to the safe project document directory.
 - `create_document_record()` creates the database row for a saved document file.
+- `update_document_extraction_metadata()` stores page count, word count, extraction status, and extraction errors.
 - `update_document_status()` updates document workflow status and rejects blank statuses.
 - `list_documents_by_project()` returns documents scoped to one project.
 
-These functions are service-layer building blocks used by the document upload API. PDF extraction, text parsing, and analysis workflows are still outside this milestone.
+These functions are service-layer building blocks used by the document upload API. Text cleaning, chunking, and analysis workflows are still outside this milestone.
 
 ## Document Upload API
 
@@ -171,9 +172,9 @@ Upload validation:
 - When a content type is provided, it must be `application/pdf` or `application/x-pdf`.
 - File bytes must not exceed `MAX_UPLOAD_FILE_SIZE_BYTES`.
 
-This endpoint stores the PDF file locally and creates a document metadata row. It does not extract text, count pages, summarize, or call any AI provider yet.
+This endpoint stores the PDF file locally, creates a document metadata row, and attempts local PyMuPDF extraction. Successful extraction updates `page_count`, `word_count`, and `status`. Extraction failure does not fail the upload; the document is returned with `status="extraction_failed"` and an `extraction_error`. PDFs with very little extractable text are marked with `status="ocr_needed"` so the app can warn users without crashing.
 
-Upload validation tests use small fake file bytes. They verify routing, validation, local saving, and metadata creation only; they intentionally do not parse PDF content.
+Upload validation tests use both small fake file bytes and generated local PDFs. They verify routing, validation, local saving, extraction metadata, and safe fallback when parsing fails.
 
 Security notes:
 
@@ -182,7 +183,7 @@ Security notes:
 - Path traversal attempts such as `../../file.pdf` cannot escape the configured upload directory.
 - API responses intentionally exclude internal storage fields such as `file_path` and `stored_filename`.
 - Generated uploads under `data/uploads/` are ignored by Git so local user files are not committed accidentally.
-- The upload endpoint stores bytes and metadata only; PDF parsing and malware scanning are outside the Week 1 milestone.
+- The upload endpoint stores bytes and metadata, then attempts local text extraction. Malware scanning is outside the current milestone.
 
 ## Database Notes
 
