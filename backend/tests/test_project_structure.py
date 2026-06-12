@@ -7,6 +7,7 @@ def test_hour_one_root_structure_exists() -> None:
     required_paths = [
         "backend",
         "backend/app/services/document_extraction.py",
+        "backend/app/services/text_cleaning.py",
         "frontend",
         "docs",
         "sample_data",
@@ -61,6 +62,7 @@ def test_docs_do_not_hardcode_local_machine_paths() -> None:
         PROJECT_ROOT / "backend" / "README.md",
         PROJECT_ROOT / "docs" / "api-reference.md",
         PROJECT_ROOT / "docs" / "weekly-progress.md",
+        PROJECT_ROOT / "docs" / "learning-notes.md",
         PROJECT_ROOT / "docs" / "day1_validation.md",
         PROJECT_ROOT / "docs" / "day3_validation.md",
         PROJECT_ROOT / "docs" / "day4_validation.md",
@@ -75,16 +77,18 @@ def test_docs_do_not_hardcode_local_machine_paths() -> None:
         assert "E:/portfolio-projects" not in content
 
 
-def test_readme_reflects_current_pdf_extraction_milestone() -> None:
+def test_readme_reflects_current_text_cleaning_milestone() -> None:
     readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
 
-    assert "Week 2, Day 1: PDF text extraction service." in readme
+    assert "Week 2, Day 2: Text cleaning service." in readme
     assert "Project CRUD service layer and FastAPI routes" in readme
     assert "Safe document storage path helpers" in readme
     assert "Document service placeholders" in readme
     assert "PDF-only document upload API" in readme
     assert "Local PDF text extraction service using PyMuPDF" in readme
     assert "ocr_needed" in readme
+    assert "Deterministic text cleaning pipeline" in readme
+    assert "Internal extracted-text and cleaned-text artifacts" in readme
     assert "Ruff linting and Black formatting configuration" in readme
     assert "docs/api-reference.md" in readme
     assert "docs/weekly-progress.md" in readme
@@ -148,6 +152,8 @@ def test_api_reference_documents_current_endpoints_and_boundaries() -> None:
         "sample_data\\invoice_GAF-175351693.pdf",
         "file_path",
         "stored_filename",
+        "extracted_text_path",
+        "cleaned_text_path",
         "No Ollama or cloud provider calls yet",
     ]
 
@@ -207,6 +213,18 @@ def test_learning_notes_cover_week_one_interview_topics() -> None:
     assert "Strong Interview Summary" in learning_notes
 
 
+def test_learning_notes_explain_week_two_cleaning_before_chunking_and_ai() -> None:
+    learning_notes = (PROJECT_ROOT / "docs" / "learning-notes.md").read_text(encoding="utf-8")
+
+    assert "Week 2 Document Processing" in learning_notes
+    assert "Why Cleaning Comes Before Chunking" in learning_notes
+    assert "Why Cleaning Comes Before AI" in learning_notes
+    assert "Text Cleaning Testing Strategy" in learning_notes
+    assert "quality gate before chunking" in learning_notes
+    assert "AI as a cleanup shortcut" in learning_notes
+    assert ".cleaned.txt" in learning_notes
+
+
 def test_day_five_validation_documents_quality_baseline() -> None:
     validation_doc = (PROJECT_ROOT / "docs" / "day5_validation.md").read_text(encoding="utf-8")
 
@@ -240,7 +258,7 @@ def test_week_one_followup_docs_reflect_completed_foundation() -> None:
 
     assert "Week 2 foundation" in limitations
     assert "Week 2 sequence" in next_steps
-    assert "Store extracted full text" in next_steps
+    assert "Store extracted and cleaned full text" in next_steps
 
 
 def test_pdf_extraction_dependency_and_docs_are_present() -> None:
@@ -256,6 +274,22 @@ def test_pdf_extraction_dependency_and_docs_are_present() -> None:
     assert "per-page text list" in architecture
     assert "ocr_needed" in architecture
     assert "attempts local PyMuPDF extraction" in (PROJECT_ROOT / "README.md").read_text(
+        encoding="utf-8"
+    )
+
+
+def test_text_cleaning_service_and_docs_are_present() -> None:
+    architecture = (PROJECT_ROOT / "docs" / "architecture.md").read_text(encoding="utf-8")
+    readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+    roadmap = (PROJECT_ROOT / "project-roadmap.md").read_text(encoding="utf-8")
+
+    assert "text_cleaning.py" in architecture
+    assert "run_text_cleaning_pipeline()" in architecture
+    assert "Deterministic text cleaning pipeline" in readme
+    assert "cleaning statistics" in readme
+    assert ".cleaned.txt" in architecture
+    assert "PDF Extraction, Cleaning, and Processing Pipeline" in roadmap
+    assert "Week 2 Day 2 Update" in (PROJECT_ROOT / "docs" / "weekly-progress.md").read_text(
         encoding="utf-8"
     )
 

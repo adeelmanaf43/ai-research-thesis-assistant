@@ -71,8 +71,16 @@ def _ensure_sqlite_schema_compatibility(database_engine: Engine) -> None:
         return
 
     document_columns = {column["name"] for column in inspector.get_columns("documents")}
-    if "extraction_error" in document_columns:
-        return
+    missing_columns = {
+        "extraction_error": "TEXT",
+        "extracted_text_path": "TEXT",
+        "cleaned_text_path": "TEXT",
+        "cleaning_warnings": "TEXT",
+    }
 
     with database_engine.begin() as connection:
-        connection.execute(text("ALTER TABLE documents ADD COLUMN extraction_error TEXT"))
+        for column_name, column_type in missing_columns.items():
+            if column_name not in document_columns:
+                connection.execute(
+                    text(f"ALTER TABLE documents ADD COLUMN {column_name} {column_type}")
+                )

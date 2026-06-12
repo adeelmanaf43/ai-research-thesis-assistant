@@ -117,10 +117,30 @@ Completed:
 - Added `ocr_needed` status for empty or very low-text PDFs.
 - Added tests for generated PDFs, mocked extraction, invalid paths, invalid PDF bytes, upload success, extraction failure, and OCR-needed detection.
 
-Still not included:
+Still not included after Day 1:
 
 - OCR processing
-- Text cleaning
+- Section detection
+- Chunking
+- Search, Q&A, summaries, comparison, or export
+
+## Week 2 Day 2 Update
+
+Week 2 Day 2 started the deterministic text cleaning layer.
+
+Completed:
+
+- Added `backend/app/services/text_cleaning.py`.
+- Added helpers for whitespace normalization, broken line repair, hyphenated line break repair, repeated page artifact removal, and control character removal.
+- Added a `clean_text()` pipeline that combines the helpers locally without any AI provider.
+- Added focused tests for each cleaning behavior and conservative repeated-content handling.
+- Added `run_text_cleaning_pipeline()` to return original text, cleaned text, cleaning statistics, and warnings.
+- Connected upload processing to save internal extracted-text and cleaned-text artifacts after successful PDF extraction.
+- Preserved the original uploaded PDF while storing text artifacts separately for later pipeline stages.
+
+Still not included:
+
+- Exposing cleaned text through API responses
 - Section detection
 - Chunking
 - Search, Q&A, summaries, comparison, or export

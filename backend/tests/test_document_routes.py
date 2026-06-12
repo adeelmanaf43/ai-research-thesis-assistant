@@ -131,6 +131,29 @@ async def test_upload_document_route_extracts_valid_pdf_metadata(
     assert payload["word_count"] == 11
     assert payload["status"] == "extracted"
     assert payload["extraction_error"] is None
+    assert "extracted_text_path" not in payload
+    assert "cleaned_text_path" not in payload
+
+    saved_pdf_files = list(document_api_settings.upload_dir.rglob("*.pdf"))
+    extracted_text_files = list(document_api_settings.upload_dir.rglob("*.extracted.txt"))
+    cleaned_text_files = list(document_api_settings.upload_dir.rglob("*.cleaned.txt"))
+
+    assert len(saved_pdf_files) == 1
+    assert saved_pdf_files[0].read_bytes() == pdf_content
+    assert len(extracted_text_files) == 1
+    assert len(cleaned_text_files) == 1
+    assert "Local extraction works" in extracted_text_files[0].read_text(encoding="utf-8")
+    assert "Local extraction works" in cleaned_text_files[0].read_text(encoding="utf-8")
+
+    database_engine = create_database_engine(document_api_settings)
+    session_factory = get_session_factory(database_engine)
+    with session_factory() as session:
+        document = session.get(Document, payload["id"])
+        assert document is not None
+        assert document.extracted_text_path == str(extracted_text_files[0])
+        assert document.cleaned_text_path == str(cleaned_text_files[0])
+        assert document.cleaning_warnings is None
+    database_engine.dispose()
 
 
 @pytest.mark.anyio
@@ -153,6 +176,7 @@ async def test_upload_document_route_marks_low_text_pdf_as_ocr_needed(
     assert payload["word_count"] == 1
     assert payload["status"] == "ocr_needed"
     assert "OCR" in payload["extraction_error"]
+    assert len(list(document_api_settings.upload_dir.rglob("*.cleaned.txt"))) == 1
 
 
 @pytest.mark.anyio
@@ -242,6 +266,44 @@ async def test_upload_document_route_uses_mocked_empty_text_detection(
     assert payload["word_count"] == 0
     assert payload["status"] == "ocr_needed"
     assert "OCR" in payload["extraction_error"]
+
+
+@pytest.mark.anyio
+async def test_upload_document_route_reports_text_artifact_storage_failure(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_id = _create_project(document_api_settings)
+
+    def fake_extract_pdf_text(_: Path) -> ExtractedPDF:
+        return ExtractedPDF(
+            page_count=1,
+            metadata={},
+            page_texts=["This document has enough words to pass the extraction threshold."],
+        )
+
+    def fail_save_text_processing_artifacts(*args, **kwargs):
+        raise DocumentStorageError("text artifact disk unavailable")
+
+    monkeypatch.setattr("backend.app.api.routes_documents.extract_pdf_text", fake_extract_pdf_text)
+    monkeypatch.setattr(
+        "backend.app.api.routes_documents.save_text_processing_artifacts",
+        fail_save_text_processing_artifacts,
+    )
+
+    async with document_api_client as client:
+        response = await client.post(
+            f"/api/projects/{project_id}/documents",
+            files={"file": ("paper.pdf", b"fake pdf bytes", "application/pdf")},
+        )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["page_count"] == 1
+    assert payload["word_count"] == 10
+    assert payload["status"] == "text_processing_failed"
+    assert "text artifact disk unavailable" in payload["extraction_error"]
 
 
 @pytest.mark.anyio

@@ -174,11 +174,85 @@ Interview explanation:
 
 > I added lightweight quality tooling once the foundation had enough code to benefit from it. The goal was consistency and maintainability without adding unnecessary process overhead.
 
+## Week 2 Document Processing
+
+Week 2 begins the local document intelligence pipeline. The app now extracts PDF text locally, cleans the extracted text deterministically, and stores separate text artifacts for later stages.
+
+Current document processing flow:
+
+- Upload and preserve the original PDF.
+- Extract text locally with PyMuPDF.
+- Detect empty or very low-text PDFs and mark them as `ocr_needed`.
+- Run deterministic text cleaning after extraction.
+- Save `.extracted.txt` and `.cleaned.txt` artifacts beside the uploaded PDF.
+- Keep internal artifact paths out of public API responses.
+
+Interview explanation:
+
+> I split document processing into small local stages: upload, extraction, cleaning, and later chunking. Each stage has its own service and tests, which makes failures easier to debug and keeps the system useful without AI providers.
+
+## Why Cleaning Comes Before Chunking
+
+PDF extraction often produces text that looks readable to a human but is noisy for software. Common problems include broken academic paragraph lines, hyphenated words split across line breaks, repeated headers, page numbers, extra spaces, and control characters.
+
+Cleaning before chunking matters because chunking turns text into the units that search, summaries, and Q&A will use later. If the input text is noisy, chunks become noisy too.
+
+Examples:
+
+- A word like `docu-\nment` should become `document` before chunking.
+- Repeated page headers should not become highly ranked search terms.
+- Page numbers should not appear as meaningful content.
+- Broken lines should not split one academic idea into awkward fragments.
+- Control characters should not pollute summaries or retrieval snippets.
+
+Interview explanation:
+
+> Cleaning is a quality gate before chunking. Chunking bad text produces bad retrieval and bad answers. By cleaning first, I improve the future search and AI layers without depending on an LLM to repair extraction noise.
+
+## Why Cleaning Comes Before AI
+
+AI providers are optional future enhancements in this project. The local system must remain useful even when Ollama is unavailable, a cloud API key is missing, or the machine is weak.
+
+Cleaning before AI matters because:
+
+- It reduces irrelevant tokens before any model call.
+- It prevents repeated headers and page numbers from distracting summaries.
+- It improves source-grounded answers by making retrieved context clearer.
+- It lowers the chance that an AI model summarizes extraction artifacts instead of research content.
+- It keeps the local-first pipeline valuable even without model access.
+
+Interview explanation:
+
+> I do not use AI as a cleanup shortcut. The app first builds a reliable deterministic text pipeline, then optional AI can work on cleaner, smaller, source-grounded context.
+
+## Text Cleaning Testing Strategy
+
+The text cleaning tests cover both cleanup and preservation.
+
+Cleanup examples:
+
+- Broken lines are repaired.
+- Hyphenated line breaks are joined.
+- Extra spaces are normalized.
+- Page numbers are removed.
+- Repeated short headers are removed.
+- Strange control characters are removed.
+
+Preservation examples:
+
+- Academic punctuation is kept.
+- Repeated meaningful findings are kept.
+- The original PDF is not modified.
+- Public API responses do not expose local text artifact paths.
+
+Interview explanation:
+
+> I tested the cleaner against realistic PDF extraction problems and also tested that it does not over-clean meaningful academic content. That balance matters because research tools must preserve source meaning.
+
 ## What Was Intentionally Not Built
 
-Week 1 intentionally does not include:
+The current foundation intentionally does not include:
 
-- PDF text extraction
 - OCR
 - RAG or retrieval
 - Local LLM calls
@@ -189,10 +263,10 @@ Week 1 intentionally does not include:
 
 Interview explanation:
 
-> I avoided fake features. Week 1 builds a reliable foundation that can be demonstrated, tested, and extended. AI features will sit on top of this foundation later.
+> I avoided fake features. The foundation now has reliable local upload, extraction, and cleaning behavior that can be demonstrated, tested, and extended. AI features will sit on top of this pipeline later.
 
 ## Strong Interview Summary
 
 Use this concise explanation:
 
-> In Week 1, I built the professional foundation for a local-first AI Research / Thesis Assistant. The backend uses FastAPI, SQLite, SQLAlchemy, Pydantic schemas, and a service-layer architecture. It supports project CRUD and PDF upload metadata storage with safe local file paths. I added isolated tests, documentation, and quality tooling with Ruff and Black. I intentionally avoided AI and PDF extraction until the storage, API, database, and testing foundation were reliable.
+> I built a local-first AI Research / Thesis Assistant foundation with FastAPI, SQLite, SQLAlchemy, Pydantic schemas, and a service-layer architecture. It supports project CRUD, safe PDF uploads, local PDF extraction, deterministic text cleaning, internal raw/cleaned text artifacts, and isolated tests. I intentionally kept AI providers optional so future summaries, search, and Q&A can build on clean local document processing instead of depending on paid APIs or model availability.

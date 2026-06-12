@@ -172,7 +172,7 @@ Upload validation:
 - When a content type is provided, it must be `application/pdf` or `application/x-pdf`.
 - File bytes must not exceed `MAX_UPLOAD_FILE_SIZE_BYTES`.
 
-This endpoint stores the PDF file locally, creates a document metadata row, and attempts local PyMuPDF extraction. Successful extraction updates `page_count`, `word_count`, and `status`. Extraction failure does not fail the upload; the document is returned with `status="extraction_failed"` and an `extraction_error`. PDFs with very little extractable text are marked with `status="ocr_needed"` so the app can warn users without crashing.
+This endpoint stores the PDF file locally, creates a document metadata row, and attempts local PyMuPDF extraction. Successful extraction runs deterministic text cleaning and saves internal extracted-text and cleaned-text artifacts beside the uploaded PDF. Extraction failure does not fail the upload; the document is returned with `status="extraction_failed"` and an `extraction_error`. PDFs with very little extractable cleaned text are marked with `status="ocr_needed"` so the app can warn users without crashing.
 
 Upload validation tests use both small fake file bytes and generated local PDFs. They verify routing, validation, local saving, extraction metadata, and safe fallback when parsing fails.
 

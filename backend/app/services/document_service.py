@@ -12,6 +12,7 @@ from backend.app.services.document_storage import (
     ensure_project_documents_dir,
     get_document_storage_path,
 )
+from backend.app.services.text_cleaning import TextCleaningResult
 
 
 class DocumentStorageError(RuntimeError):
@@ -29,6 +30,12 @@ class SavedDocumentFile:
     stored_filename: str
     file_path: Path
     file_size_bytes: int
+
+
+@dataclass(frozen=True)
+class TextProcessingArtifacts:
+    extracted_text_path: Path
+    cleaned_text_path: Path
 
 
 def save_uploaded_file(
@@ -76,6 +83,26 @@ def create_document_record(
     return document
 
 
+def save_text_processing_artifacts(
+    pdf_file_path: Path | str,
+    cleaning_result: TextCleaningResult,
+) -> TextProcessingArtifacts:
+    source_path = Path(pdf_file_path)
+    extracted_text_path = source_path.with_name(f"{source_path.stem}.extracted.txt")
+    cleaned_text_path = source_path.with_name(f"{source_path.stem}.cleaned.txt")
+
+    try:
+        extracted_text_path.write_text(cleaning_result.original_text, encoding="utf-8")
+        cleaned_text_path.write_text(cleaning_result.cleaned_text, encoding="utf-8")
+    except OSError as exc:
+        raise DocumentStorageError(f"Could not save text processing artifacts: {exc}") from exc
+
+    return TextProcessingArtifacts(
+        extracted_text_path=extracted_text_path,
+        cleaned_text_path=cleaned_text_path,
+    )
+
+
 def count_words(text: str) -> int:
     return len(WORD_PATTERN.findall(text))
 
@@ -92,6 +119,9 @@ def update_document_extraction_metadata(
     word_count: int | None,
     status: str,
     extraction_error: str | None = None,
+    extracted_text_path: Path | str | None = None,
+    cleaned_text_path: Path | str | None = None,
+    cleaning_warnings: list[str] | None = None,
 ) -> Document:
     cleaned_status = status.strip()
     if not cleaned_status:
@@ -102,6 +132,9 @@ def update_document_extraction_metadata(
     document.status = cleaned_status
     cleaned_error = extraction_error.strip() if extraction_error else ""
     document.extraction_error = cleaned_error or None
+    document.extracted_text_path = str(extracted_text_path) if extracted_text_path else None
+    document.cleaned_text_path = str(cleaned_text_path) if cleaned_text_path else None
+    document.cleaning_warnings = "\n".join(cleaning_warnings or []) or None
     db.add(document)
     db.commit()
     db.refresh(document)

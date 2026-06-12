@@ -45,6 +45,8 @@ Document persistence behavior starts in `backend/app/services/document_service.p
 
 PDF text extraction starts in `backend/app/services/document_extraction.py`. It uses PyMuPDF locally to return page count, basic PDF metadata, a per-page text list, combined text, and a safe `has_text` flag. This service is intentionally separate from upload routes so extraction can be tested and evolved without making file upload brittle.
 
+Text cleaning starts in `backend/app/services/text_cleaning.py`. It provides deterministic helpers for whitespace normalization, broken line repair, hyphenated line break repair, conservative repeated page artifact removal, control character removal, and a full `run_text_cleaning_pipeline()` function. The pipeline returns original text, cleaned text, cleaning statistics, and warnings. It is intentionally local and rule-based so it can run without AI providers.
+
 ## Project API
 
 Project routes live in `backend/app/api/routes_projects.py` and are mounted under `/api/projects`. They remain thin FastAPI handlers over the project service layer.
@@ -57,4 +59,4 @@ Document upload routes live in `backend/app/api/routes_documents.py` and are mou
 
 The storage foundation defines safe local path helpers used by the upload endpoint. Filenames are sanitized before storage, project IDs must be positive integers, and resolved paths are checked so path traversal cannot escape the configured upload directory.
 
-The document upload API saves PDF bytes, creates document metadata records, then attempts local extraction. Successful extraction updates page count, word count, and status. Failed extraction keeps the upload successful and stores an extraction error. Very low extracted text is marked `ocr_needed` so scanned or empty PDFs can be flagged without requiring OCR yet. Text cleaning, chunking, and analysis are still later Week 2 steps.
+The document upload API saves PDF bytes, creates document metadata records, then attempts local extraction. Successful extraction runs deterministic text cleaning and saves separate `.extracted.txt` and `.cleaned.txt` artifacts beside the uploaded PDF. The original PDF is left untouched. Failed extraction keeps the upload successful and stores an extraction error. Very low cleaned text is marked `ocr_needed` so scanned or empty PDFs can be flagged without requiring OCR yet. Chunking and analysis are still later Week 2 steps.

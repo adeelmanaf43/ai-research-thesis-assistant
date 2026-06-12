@@ -36,6 +36,9 @@ class DocumentLike:
     word_count = 4500
     status = "created"
     extraction_error = None
+    extracted_text_path = "data/uploads/paper.extracted.txt"
+    cleaned_text_path = "data/uploads/paper.cleaned.txt"
+    cleaning_warnings = None
     uploaded_at = datetime(2026, 1, 3, tzinfo=UTC)
 
 
@@ -129,3 +132,6 @@ def test_document_response_excludes_internal_storage_fields() -> None:
     assert payload["extraction_error"] is None
     assert "file_path" not in payload
     assert "stored_filename" not in payload
+    assert "extracted_text_path" not in payload
+    assert "cleaned_text_path" not in payload
+    assert "cleaning_warnings" not in payload

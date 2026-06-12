@@ -13,10 +13,12 @@ from backend.app.services.document_service import (
     count_words,
     create_document_record,
     is_ocr_likely_needed,
+    save_text_processing_artifacts,
     save_uploaded_file,
     update_document_extraction_metadata,
 )
 from backend.app.services.project_service import get_project_by_id
+from backend.app.services.text_cleaning import run_text_cleaning_pipeline
 
 PDF_CONTENT_TYPES = {"application/pdf", "application/x-pdf"}
 
@@ -97,7 +99,22 @@ async def upload_document_route(
             extraction_error=str(exc),
         )
 
-    word_count = count_words(extracted_pdf.full_text)
+    cleaning_result = run_text_cleaning_pipeline(extracted_pdf.full_text)
+    word_count = count_words(cleaning_result.cleaned_text)
+
+    try:
+        text_artifacts = save_text_processing_artifacts(saved_file.file_path, cleaning_result)
+    except DocumentStorageError as exc:
+        return update_document_extraction_metadata(
+            db,
+            document,
+            page_count=extracted_pdf.page_count,
+            word_count=word_count,
+            status="text_processing_failed",
+            extraction_error=str(exc),
+            cleaning_warnings=cleaning_result.warnings,
+        )
+
     if is_ocr_likely_needed(word_count):
         return update_document_extraction_metadata(
             db,
@@ -106,6 +123,9 @@ async def upload_document_route(
             word_count=word_count,
             status="ocr_needed",
             extraction_error=OCR_NEEDED_MESSAGE,
+            extracted_text_path=text_artifacts.extracted_text_path,
+            cleaned_text_path=text_artifacts.cleaned_text_path,
+            cleaning_warnings=cleaning_result.warnings,
         )
 
     return update_document_extraction_metadata(
@@ -114,4 +134,7 @@ async def upload_document_route(
         page_count=extracted_pdf.page_count,
         word_count=word_count,
         status="extracted",
+        extracted_text_path=text_artifacts.extracted_text_path,
+        cleaned_text_path=text_artifacts.cleaned_text_path,
+        cleaning_warnings=cleaning_result.warnings,
     )

@@ -12,35 +12,34 @@ Goal: create a clean, testable, documented base that can be committed and tagged
 - Day 4: safe document storage helpers, document service foundation, PDF-only upload API, upload validation tests, and storage security notes
 - Day 5: development tooling, quality commands, learning notes, portfolio README, validation review, commit, and tag
 
-## Week 2: Document Intake Foundation
+## Week 2: PDF Extraction, Cleaning, and Processing Pipeline
 
-Goal: add local project and document intake without AI dependencies.
-
-- Project creation
-- Local file upload flow
-- Safe file naming and storage rules
-- Basic document metadata
-- Empty or unsupported file warnings
-
-## Week 3: Local Text Processing
-
-Goal: make documents useful with deterministic local processing.
+Goal: build reliable local document ingestion without AI dependencies.
 
 - PDF text extraction
 - Text cleaning
+- Empty or scanned document warnings
 - Section detection
 - Chunking with overlap
-- Word count and page count
+- Store processing metadata for later retrieval
 
-## Week 4: Local Analysis
+## Week 3: Local Analysis Foundation
 
-Goal: produce helpful outputs without LLMs.
+Goal: make processed documents useful with deterministic local analysis.
 
 - Keyword extraction
 - Extractive summaries
 - Reference detection
 - Research information extraction
+
+## Week 4: Literature Review Outputs
+
+Goal: turn deterministic analysis into structured research workspace data.
+
 - Literature matrix draft data
+- Multi-paper comparison inputs
+- Citation/reference review helpers
+- Research notes suitable for later report export
 
 ## Week 5: Search and Source-Grounded Q&A
 

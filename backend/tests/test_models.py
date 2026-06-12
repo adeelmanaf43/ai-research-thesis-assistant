@@ -86,6 +86,9 @@ def test_mvp_project_document_graph_can_exist_without_login(workspace_tmp_path: 
         assert project.id is not None
         assert project.user_id is None
         assert document.id is not None
+        assert hasattr(document, "extracted_text_path")
+        assert hasattr(document, "cleaned_text_path")
+        assert hasattr(document, "cleaning_warnings")
         assert chunk.id is not None
         assert analysis.provider_mode == "local"
         assert chat.provider_mode == "local"

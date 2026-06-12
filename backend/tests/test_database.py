@@ -102,7 +102,7 @@ def test_init_database_creates_base_model_tables(workspace_tmp_path: Path) -> No
     }
 
 
-def test_init_database_creates_document_extraction_error_column(workspace_tmp_path: Path) -> None:
+def test_init_database_creates_document_processing_columns(workspace_tmp_path: Path) -> None:
     database_path = workspace_tmp_path / "extraction_schema.db"
     settings = Settings(
         app_name="Test App",
@@ -124,3 +124,6 @@ def test_init_database_creates_document_extraction_error_column(workspace_tmp_pa
     database_engine.dispose()
 
     assert "extraction_error" in document_columns
+    assert "extracted_text_path" in document_columns
+    assert "cleaned_text_path" in document_columns
+    assert "cleaning_warnings" in document_columns

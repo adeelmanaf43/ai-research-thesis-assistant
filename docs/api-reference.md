@@ -262,7 +262,7 @@ Expected status:
 Extraction behavior:
 
 - Valid PDFs are parsed locally with PyMuPDF after saving.
-- Successful extraction sets `status` to `extracted`, populates `page_count`, and populates `word_count`.
+- Successful extraction runs deterministic text cleaning, saves internal `.extracted.txt` and `.cleaned.txt` artifacts, sets `status` to `extracted`, populates `page_count`, and populates `word_count`.
 - PDFs that save successfully but cannot be parsed still return `201 Created`.
 - Extraction failures set `status` to `extraction_failed` and return `extraction_error`.
 - PDFs with very little extractable text use `status` value `ocr_needed` and return an OCR warning in `extraction_error`.
@@ -271,13 +271,15 @@ Response boundary:
 
 - `file_path` is intentionally not exposed.
 - `stored_filename` is intentionally not exposed.
+- `extracted_text_path` and `cleaned_text_path` are intentionally not exposed.
 - The original filename is returned for user clarity.
 - Saved files remain under the configured local upload directory.
 
 ## Known Limitations
 
 - No OCR processing for scanned PDFs yet.
-- No text cleaning, section detection, or chunking yet.
+- Text cleaning artifacts are stored internally but are not exposed through API responses yet.
+- No section detection or chunking yet.
 - No search, retrieval, RAG, Q&A, summaries, comparison, or export yet.
 - No auth or permissions layer yet.
 - No Ollama or cloud provider calls yet.

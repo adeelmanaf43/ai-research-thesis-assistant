@@ -23,4 +23,4 @@ Example PDF upload request:
 curl.exe -X POST "http://127.0.0.1:8000/api/projects/1/documents" -F "file=@sample_data\invoice_GAF-175351693.pdf;type=application/pdf"
 ```
 
-Text cleaning, chunking, analysis, search, Q&A, comparison, OCR processing, and export are intentionally not implemented yet.
+Text cleaning runs after successful extraction and saves internal raw/cleaned text artifacts for later processing, but those internal paths are not exposed through API responses. Chunking, analysis, search, Q&A, comparison, OCR processing, and export are intentionally not implemented yet.

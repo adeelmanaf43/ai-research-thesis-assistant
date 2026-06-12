@@ -12,11 +12,13 @@ from backend.app.services.document_service import (
     create_document_record,
     is_ocr_likely_needed,
     list_documents_by_project,
+    save_text_processing_artifacts,
     save_uploaded_file,
     update_document_extraction_metadata,
     update_document_status,
 )
 from backend.app.services.project_service import create_project
+from backend.app.services.text_cleaning import run_text_cleaning_pipeline
 
 
 def _session_factory(workspace_tmp_path: Path):
@@ -91,6 +93,26 @@ def test_create_document_record_persists_saved_file_metadata(workspace_tmp_path:
     database_engine.dispose()
 
 
+def test_save_text_processing_artifacts_writes_extracted_and_cleaned_text(
+    workspace_tmp_path: Path,
+) -> None:
+    pdf_path = workspace_tmp_path / "paper.pdf"
+    pdf_path.write_bytes(b"original pdf bytes")
+    cleaning_result = run_text_cleaning_pipeline(
+        "Header\n1\nThis docu-\nment has noisy   text.\nHeader\n2\nHeader\n3"
+    )
+
+    artifacts = save_text_processing_artifacts(pdf_path, cleaning_result)
+
+    assert pdf_path.read_bytes() == b"original pdf bytes"
+    assert artifacts.extracted_text_path == workspace_tmp_path / "paper.extracted.txt"
+    assert artifacts.cleaned_text_path == workspace_tmp_path / "paper.cleaned.txt"
+    assert (
+        artifacts.extracted_text_path.read_text(encoding="utf-8") == cleaning_result.original_text
+    )
+    assert artifacts.cleaned_text_path.read_text(encoding="utf-8") == cleaning_result.cleaned_text
+
+
 def test_update_document_status_strips_and_persists_status(workspace_tmp_path: Path) -> None:
     session_factory, database_engine, settings = _session_factory(workspace_tmp_path)
 
@@ -144,12 +166,18 @@ def test_update_document_extraction_metadata_persists_counts_and_error(
             word_count=120,
             status=" extracted ",
             extraction_error=" ",
+            extracted_text_path=workspace_tmp_path / "paper.extracted.txt",
+            cleaned_text_path=workspace_tmp_path / "paper.cleaned.txt",
+            cleaning_warnings=["warning one", "warning two"],
         )
 
         assert updated.page_count == 2
         assert updated.word_count == 120
         assert updated.status == "extracted"
         assert updated.extraction_error is None
+        assert updated.extracted_text_path == str(workspace_tmp_path / "paper.extracted.txt")
+        assert updated.cleaned_text_path == str(workspace_tmp_path / "paper.cleaned.txt")
+        assert updated.cleaning_warnings == "warning one\nwarning two"
 
         failed = update_document_extraction_metadata(
             session,

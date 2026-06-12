@@ -2,7 +2,7 @@
 
 A local-first document intelligence web app for students, researchers, thesis writers, academic freelancers, and analysts.
 
-The project is designed to keep working without paid APIs, mandatory Ollama, or cloud services. The current foundation includes project management, safe PDF upload, local PDF text extraction, tests, and documentation.
+The project is designed to keep working without paid APIs, mandatory Ollama, or cloud services. The current foundation includes project management, safe PDF upload, local PDF text extraction, deterministic text cleaning helpers, tests, and documentation.
 
 ## Problem
 
@@ -20,7 +20,7 @@ AI Research / Thesis Assistant is being built as a local document intelligence a
 - Keep business logic testable through service layers
 - Add deterministic tests, documentation, linting, and formatting
 
-Future milestones will add text cleaning, chunking, search, source-grounded Q&A, literature matrices, comparison, and report export.
+Future milestones will add chunking, search, source-grounded Q&A, literature matrices, comparison, and report export.
 
 ## Architecture
 
@@ -109,7 +109,7 @@ Run the frontend:
 
 ## Current Features
 
-Week 2, Day 1: PDF text extraction service.
+Week 2, Day 2: Text cleaning service.
 
 Included now:
 
@@ -126,6 +126,8 @@ Included now:
 - PDF-only document upload API with project existence, extension, content type, and size validation
 - Local PDF text extraction service using PyMuPDF
 - Upload-time extraction metadata with page count, word count, `extracted`, `extraction_failed`, and `ocr_needed` statuses
+- Deterministic text cleaning pipeline with original text, cleaned text, cleaning statistics, and warnings
+- Internal extracted-text and cleaned-text artifacts saved beside uploaded PDFs for later pipeline stages
 - Ruff linting and Black formatting configuration
 - Pytest setup and foundation tests
 - Documentation starter set
@@ -152,8 +154,6 @@ curl.exe -X POST "http://127.0.0.1:8000/api/projects/1/documents" -F "file=@samp
 
 Near-term milestones:
 
-- Local PDF text extraction
-- Text cleaning
 - Section detection
 - Chunking with overlap
 - Local summaries and keyword extraction
@@ -171,7 +171,6 @@ See [project-roadmap.md](project-roadmap.md) for the full staged plan.
 Not included yet:
 
 - OCR processing for scanned PDFs
-- Text cleaning
 - Section detection
 - Chunking
 - LLM providers
@@ -182,7 +181,7 @@ Not included yet:
 - Docker
 - Cloud AI APIs
 
-The current upload API stores PDF bytes, creates document metadata, and attempts local PyMuPDF extraction to populate page count, word count, status, and extraction errors. It does not summarize or analyze document content yet.
+The current upload API stores PDF bytes, creates document metadata, attempts local PyMuPDF extraction, runs deterministic text cleaning, and saves internal raw/cleaned text artifacts for later pipeline stages. It does not summarize or analyze document content yet.
 
 ## Screenshots
 
