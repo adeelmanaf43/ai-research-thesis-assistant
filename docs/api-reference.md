@@ -10,17 +10,17 @@ http://127.0.0.1:8000
 
 ## Current Endpoints
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| `GET` | `/` | Basic app readiness metadata |
-| `GET` | `/health` | Local health check |
-| `GET` | `/api/v1/health` | Versioned health check |
-| `POST` | `/api/projects` | Create a local research project |
-| `GET` | `/api/projects` | List local research projects |
-| `GET` | `/api/projects/{project_id}` | Fetch one project by ID |
-| `PATCH` | `/api/projects/{project_id}` | Update project name or description |
-| `DELETE` | `/api/projects/{project_id}` | Delete a project |
-| `POST` | `/api/projects/{project_id}/documents` | Upload one PDF into an existing project |
+| Method   | Path                                   | Purpose                                 |
+| -------- | -------------------------------------- | --------------------------------------- |
+| `GET`    | `/`                                    | Basic app readiness metadata            |
+| `GET`    | `/health`                              | Local health check                      |
+| `GET`    | `/api/v1/health`                       | Versioned health check                  |
+| `POST`   | `/api/projects`                        | Create a local research project         |
+| `GET`    | `/api/projects`                        | List local research projects            |
+| `GET`    | `/api/projects/{project_id}`           | Fetch one project by ID                 |
+| `PATCH`  | `/api/projects/{project_id}`           | Update project name or description      |
+| `DELETE` | `/api/projects/{project_id}`           | Delete a project                        |
+| `POST`   | `/api/projects/{project_id}/documents` | Upload one PDF into an existing project |
 
 ## Health
 
