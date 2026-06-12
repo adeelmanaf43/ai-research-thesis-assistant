@@ -8,6 +8,7 @@ def test_hour_one_root_structure_exists() -> None:
         "backend",
         "backend/app/services/document_extraction.py",
         "backend/app/services/text_cleaning.py",
+        "backend/app/services/section_detection.py",
         "frontend",
         "docs",
         "sample_data",
@@ -77,10 +78,10 @@ def test_docs_do_not_hardcode_local_machine_paths() -> None:
         assert "E:/portfolio-projects" not in content
 
 
-def test_readme_reflects_current_text_cleaning_milestone() -> None:
+def test_readme_reflects_current_section_detection_milestone() -> None:
     readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
 
-    assert "Week 2, Day 2: Text cleaning service." in readme
+    assert "Week 2, Day 3: Section detection service." in readme
     assert "Project CRUD service layer and FastAPI routes" in readme
     assert "Safe document storage path helpers" in readme
     assert "Document service placeholders" in readme
@@ -89,6 +90,7 @@ def test_readme_reflects_current_text_cleaning_milestone() -> None:
     assert "ocr_needed" in readme
     assert "Deterministic text cleaning pipeline" in readme
     assert "Internal extracted-text and cleaned-text artifacts" in readme
+    assert "Rule-based section detection service" in readme
     assert "Ruff linting and Black formatting configuration" in readme
     assert "docs/api-reference.md" in readme
     assert "docs/weekly-progress.md" in readme
@@ -292,6 +294,21 @@ def test_text_cleaning_service_and_docs_are_present() -> None:
     assert "Week 2 Day 2 Update" in (PROJECT_ROOT / "docs" / "weekly-progress.md").read_text(
         encoding="utf-8"
     )
+
+
+def test_section_detection_service_and_docs_are_present() -> None:
+    architecture = (PROJECT_ROOT / "docs" / "architecture.md").read_text(encoding="utf-8")
+    readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+    weekly_progress = (PROJECT_ROOT / "docs" / "weekly-progress.md").read_text(encoding="utf-8")
+
+    assert "section_detection.py" in architecture
+    assert "Rule-based section detection service" in readme
+    assert "confidence" in readme
+    assert "Week 2 Day 3 Update" in weekly_progress
+    assert "unknown sections" in architecture
+    assert "character start and end indexes" in architecture
+    assert "section_detection analysis" in readme
+    assert "`section_detection` analysis record" in architecture
 
 
 def test_week_two_day_one_validation_documents_processing_behavior() -> None:

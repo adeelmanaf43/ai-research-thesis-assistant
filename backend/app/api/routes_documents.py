@@ -9,15 +9,18 @@ from backend.app.schemas.document import DocumentCreate, DocumentResponse
 from backend.app.services.document_extraction import PDFExtractionError, extract_pdf_text
 from backend.app.services.document_service import (
     OCR_NEEDED_MESSAGE,
+    DocumentProcessingError,
     DocumentStorageError,
     count_words,
     create_document_record,
+    create_section_detection_analysis,
     is_ocr_likely_needed,
     save_text_processing_artifacts,
     save_uploaded_file,
     update_document_extraction_metadata,
 )
 from backend.app.services.project_service import get_project_by_id
+from backend.app.services.section_detection import detect_sections
 from backend.app.services.text_cleaning import run_text_cleaning_pipeline
 
 PDF_CONTENT_TYPES = {"application/pdf", "application/x-pdf"}
@@ -112,6 +115,22 @@ async def upload_document_route(
             word_count=word_count,
             status="text_processing_failed",
             extraction_error=str(exc),
+            cleaning_warnings=cleaning_result.warnings,
+        )
+
+    sections = detect_sections(cleaning_result.cleaned_text)
+    try:
+        create_section_detection_analysis(db, document, sections)
+    except DocumentProcessingError as exc:
+        return update_document_extraction_metadata(
+            db,
+            document,
+            page_count=extracted_pdf.page_count,
+            word_count=word_count,
+            status="section_detection_failed",
+            extraction_error=str(exc),
+            extracted_text_path=text_artifacts.extracted_text_path,
+            cleaned_text_path=text_artifacts.cleaned_text_path,
             cleaning_warnings=cleaning_result.warnings,
         )
 

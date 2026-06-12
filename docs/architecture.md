@@ -47,6 +47,10 @@ PDF text extraction starts in `backend/app/services/document_extraction.py`. It 
 
 Text cleaning starts in `backend/app/services/text_cleaning.py`. It provides deterministic helpers for whitespace normalization, broken line repair, hyphenated line break repair, conservative repeated page artifact removal, control character removal, and a full `run_text_cleaning_pipeline()` function. The pipeline returns original text, cleaned text, cleaning statistics, and warnings. It is intentionally local and rule-based so it can run without AI providers.
 
+Section detection starts in `backend/app/services/section_detection.py`. It uses rule-based academic headings to identify title, abstract, introduction, literature review, methodology, results, discussion, conclusion, references, and unknown sections. Each detected section includes a section name, detected heading, character start and end indexes, text, confidence score, and line indexes. The service is deterministic and local-first so it can run before chunking or AI providers.
+
+The section detector is intentionally explainable rather than intelligent. It depends on headings extracted from the PDF text, so unusual section names, damaged PDF layout, OCR-only documents, or headings split across lines can reduce accuracy. Unsupported headings are preserved inside the nearest known section instead of being discarded, and heuristic confidence values are used only as local processing hints.
+
 ## Project API
 
 Project routes live in `backend/app/api/routes_projects.py` and are mounted under `/api/projects`. They remain thin FastAPI handlers over the project service layer.
@@ -59,4 +63,4 @@ Document upload routes live in `backend/app/api/routes_documents.py` and are mou
 
 The storage foundation defines safe local path helpers used by the upload endpoint. Filenames are sanitized before storage, project IDs must be positive integers, and resolved paths are checked so path traversal cannot escape the configured upload directory.
 
-The document upload API saves PDF bytes, creates document metadata records, then attempts local extraction. Successful extraction runs deterministic text cleaning and saves separate `.extracted.txt` and `.cleaned.txt` artifacts beside the uploaded PDF. The original PDF is left untouched. Failed extraction keeps the upload successful and stores an extraction error. Very low cleaned text is marked `ocr_needed` so scanned or empty PDFs can be flagged without requiring OCR yet. Chunking and analysis are still later Week 2 steps.
+The document upload API saves PDF bytes, creates document metadata records, then attempts local extraction. Successful extraction runs deterministic text cleaning and saves separate `.extracted.txt` and `.cleaned.txt` artifacts beside the uploaded PDF. The original PDF is left untouched. Failed extraction keeps the upload successful and stores an extraction error. Very low cleaned text is marked `ocr_needed` so scanned or empty PDFs can be flagged without requiring OCR yet. Section detection runs on cleaned text and stores structured sections in a local `section_detection` analysis record. Chunking is still a later Week 2 step.

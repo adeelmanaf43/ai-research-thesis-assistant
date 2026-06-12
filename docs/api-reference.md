@@ -214,7 +214,7 @@ Expected status:
 
 ## Documents
 
-Document endpoints currently support PDF upload, metadata storage, and local PyMuPDF extraction. They do not clean, chunk, summarize, search, or analyze document content yet.
+Document endpoints currently support PDF upload, metadata storage, local PyMuPDF extraction, deterministic text cleaning, and internal rule-based section detection. They do not chunk, summarize, search, or run AI analysis yet.
 
 ### `POST /api/projects/{project_id}/documents`
 
@@ -263,6 +263,7 @@ Extraction behavior:
 
 - Valid PDFs are parsed locally with PyMuPDF after saving.
 - Successful extraction runs deterministic text cleaning, saves internal `.extracted.txt` and `.cleaned.txt` artifacts, sets `status` to `extracted`, populates `page_count`, and populates `word_count`.
+- Section detection runs on cleaned text and stores structured sections in an internal `section_detection` analysis record.
 - PDFs that save successfully but cannot be parsed still return `201 Created`.
 - Extraction failures set `status` to `extraction_failed` and return `extraction_error`.
 - PDFs with very little extractable text use `status` value `ocr_needed` and return an OCR warning in `extraction_error`.
@@ -279,7 +280,10 @@ Response boundary:
 
 - No OCR processing for scanned PDFs yet.
 - Text cleaning artifacts are stored internally but are not exposed through API responses yet.
-- No section detection or chunking yet.
+- Section detection output is stored internally but is not exposed through API responses yet.
+- Section detection is rule-based and depends on extracted heading text. It can miss non-standard academic structures, merge unsupported sections into the nearest known section, or infer a weak title from the first non-empty line.
+- Section confidence values are explainable heuristic scores, not statistical model confidence.
+- No chunking yet.
 - No search, retrieval, RAG, Q&A, summaries, comparison, or export yet.
 - No auth or permissions layer yet.
 - No Ollama or cloud provider calls yet.

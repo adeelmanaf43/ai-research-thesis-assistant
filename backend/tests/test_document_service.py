@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -10,6 +11,7 @@ from backend.app.services.document_service import (
     MIN_EXTRACTED_WORDS_FOR_TEXT,
     count_words,
     create_document_record,
+    create_section_detection_analysis,
     is_ocr_likely_needed,
     list_documents_by_project,
     save_text_processing_artifacts,
@@ -18,6 +20,7 @@ from backend.app.services.document_service import (
     update_document_status,
 )
 from backend.app.services.project_service import create_project
+from backend.app.services.section_detection import detect_sections
 from backend.app.services.text_cleaning import run_text_cleaning_pipeline
 
 
@@ -111,6 +114,38 @@ def test_save_text_processing_artifacts_writes_extracted_and_cleaned_text(
         artifacts.extracted_text_path.read_text(encoding="utf-8") == cleaning_result.original_text
     )
     assert artifacts.cleaned_text_path.read_text(encoding="utf-8") == cleaning_result.cleaned_text
+
+
+def test_create_section_detection_analysis_persists_structured_sections(
+    workspace_tmp_path: Path,
+) -> None:
+    session_factory, database_engine, settings = _session_factory(workspace_tmp_path)
+
+    with session_factory() as session:
+        project = create_project(session, ProjectCreate(name="Section project"))
+        saved_file = save_uploaded_file(settings.upload_dir, project.id, "paper.pdf", b"content")
+        document = create_document_record(
+            session,
+            DocumentCreate(project_id=project.id, original_filename="paper.pdf"),
+            saved_file.stored_filename,
+            saved_file.file_path,
+        )
+        sections = detect_sections(
+            "Research Title\n\nAbstract\nShort abstract.\n\nIntroduction\nOpening text."
+        )
+
+        analysis = create_section_detection_analysis(session, document, sections)
+        payload = json.loads(analysis.content)
+
+        assert analysis.project_id == project.id
+        assert analysis.document_id == document.id
+        assert analysis.analysis_type == "section_detection"
+        assert analysis.provider_mode == "local"
+        assert payload[0]["section_name"] == "Title"
+        assert payload[1]["detected_heading"] == "Abstract"
+        assert payload[1]["confidence"] == 0.95
+
+    database_engine.dispose()
 
 
 def test_update_document_status_strips_and_persists_status(workspace_tmp_path: Path) -> None:

@@ -109,7 +109,7 @@ Run the frontend:
 
 ## Current Features
 
-Week 2, Day 2: Text cleaning service.
+Week 2, Day 3: Section detection service.
 
 Included now:
 
@@ -128,6 +128,8 @@ Included now:
 - Upload-time extraction metadata with page count, word count, `extracted`, `extraction_failed`, and `ocr_needed` statuses
 - Deterministic text cleaning pipeline with original text, cleaned text, cleaning statistics, and warnings
 - Internal extracted-text and cleaned-text artifacts saved beside uploaded PDFs for later pipeline stages
+- Rule-based section detection service with structured section names, headings, indexes, text, confidence, and unknown fallbacks
+- Internal section_detection analysis output stored after successful upload processing
 - Ruff linting and Black formatting configuration
 - Pytest setup and foundation tests
 - Documentation starter set
@@ -154,7 +156,6 @@ curl.exe -X POST "http://127.0.0.1:8000/api/projects/1/documents" -F "file=@samp
 
 Near-term milestones:
 
-- Section detection
 - Chunking with overlap
 - Local summaries and keyword extraction
 - TF-IDF search
@@ -171,7 +172,8 @@ See [project-roadmap.md](project-roadmap.md) for the full staged plan.
 Not included yet:
 
 - OCR processing for scanned PDFs
-- Section detection
+- Public API access to stored cleaned text or detected section records
+- Perfect section detection for unusual headings or damaged PDF extraction output
 - Chunking
 - LLM providers
 - RAG/retrieval
@@ -181,7 +183,7 @@ Not included yet:
 - Docker
 - Cloud AI APIs
 
-The current upload API stores PDF bytes, creates document metadata, attempts local PyMuPDF extraction, runs deterministic text cleaning, and saves internal raw/cleaned text artifacts for later pipeline stages. It does not summarize or analyze document content yet.
+The current upload API stores PDF bytes, creates document metadata, attempts local PyMuPDF extraction, runs deterministic text cleaning, saves internal raw/cleaned text artifacts, and stores detected sections as local analysis output. Section detection is rule-based and explainable, not a replacement for semantic document understanding. The app does not summarize or analyze document content with AI yet.
 
 ## Screenshots
 

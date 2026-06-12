@@ -249,6 +249,25 @@ Interview explanation:
 
 > I tested the cleaner against realistic PDF extraction problems and also tested that it does not over-clean meaningful academic content. That balance matters because research tools must preserve source meaning.
 
+## Rule-Based Section Detection
+
+The section detection service identifies common academic sections using clear heading rules. It supports title, abstract, introduction, literature review, methodology, results, discussion, conclusion, references, and unknown fallbacks.
+
+Why this matters:
+
+- It gives later chunking and retrieval stages useful section metadata without requiring an LLM.
+- It is deterministic, fast, local, and easy to test.
+- It keeps unsupported headings in nearby section text instead of dropping source content.
+- It records character indexes so later features can connect sections back to cleaned text.
+
+Important limitation:
+
+> Rule-based section detection is explainable but not semantically intelligent. It depends on extracted headings, so damaged PDF layout, unusual academic structure, OCR-only pages, or headings split across lines can reduce accuracy.
+
+Interview explanation:
+
+> I started with rule-based section detection because the MVP must work locally and predictably. It gives useful structure for later chunking while making limitations explicit. A future AI or ML layer can improve classification, but the deterministic baseline is already testable and inspectable.
+
 ## What Was Intentionally Not Built
 
 The current foundation intentionally does not include:

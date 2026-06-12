@@ -141,6 +141,24 @@ Completed:
 Still not included:
 
 - Exposing cleaned text through API responses
-- Section detection
+- Chunking
+- Search, Q&A, summaries, comparison, or export
+
+## Week 2 Day 3 Update
+
+Week 2 Day 3 started the deterministic section detection layer.
+
+Completed:
+
+- Added `backend/app/services/section_detection.py`.
+- Added rule-based heading detection for title, abstract, introduction, literature review, methodology, results, discussion, conclusion, references, and unknown sections.
+- Added structured section output with section name, detected heading, character indexes, section text, confidence score, and line indexes.
+- Connected section detection to upload processing after text cleaning.
+- Stored detected sections as internal `section_detection` analysis output.
+- Added tests for academic heading aliases, title inference, unknown fallback behavior, empty text, and unsupported headings inside known sections.
+
+Still not included:
+
+- Exposing detected sections through API responses
 - Chunking
 - Search, Q&A, summaries, comparison, or export

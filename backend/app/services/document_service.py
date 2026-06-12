@@ -1,10 +1,13 @@
+import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
 
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from backend.app.models.analysis import Analysis
 from backend.app.models.document import Document
 from backend.app.schemas.document import DocumentCreate
 from backend.app.services.document_storage import (
@@ -12,11 +15,16 @@ from backend.app.services.document_storage import (
     ensure_project_documents_dir,
     get_document_storage_path,
 )
+from backend.app.services.section_detection import DetectedSection
 from backend.app.services.text_cleaning import TextCleaningResult
 
 
 class DocumentStorageError(RuntimeError):
     """Raised when a document file cannot be saved locally."""
+
+
+class DocumentProcessingError(RuntimeError):
+    """Raised when local document processing metadata cannot be saved."""
 
 
 WORD_PATTERN = re.compile(r"\b\w+\b")
@@ -101,6 +109,36 @@ def save_text_processing_artifacts(
         extracted_text_path=extracted_text_path,
         cleaned_text_path=cleaned_text_path,
     )
+
+
+def create_section_detection_analysis(
+    db: Session,
+    document: Document,
+    sections: list[DetectedSection],
+) -> Analysis:
+    content = json.dumps(
+        [section.to_dict() for section in sections],
+        ensure_ascii=True,
+        indent=2,
+    )
+    analysis = Analysis(
+        project_id=document.project_id,
+        document_id=document.id,
+        analysis_type="section_detection",
+        title="Detected document sections",
+        content=content,
+        provider_mode="local",
+    )
+
+    try:
+        db.add(analysis)
+        db.commit()
+        db.refresh(analysis)
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise DocumentProcessingError("Could not save section detection analysis.") from exc
+
+    return analysis
 
 
 def count_words(text: str) -> int:

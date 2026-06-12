@@ -26,6 +26,10 @@ data/uploads/*
 !data/uploads/.gitkeep
 backend/tests/tmp_work/
 
+# Local/private sample documents
+sample_data/*.pdf
+!sample_data/invoice_GAF-175351693.pdf
+
 # OS and editor files
 .DS_Store
 Thumbs.db

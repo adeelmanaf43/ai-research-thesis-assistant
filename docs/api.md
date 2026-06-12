@@ -168,6 +168,8 @@ Validation behavior:
 - Non-PDF content types return `400 Bad Request` when the content type is provided.
 - Oversized files return `413 Content Too Large`.
 - Valid PDFs are saved, parsed locally with PyMuPDF, cleaned deterministically, and stored as internal extracted/cleaned text artifacts.
+- Detected sections are stored internally as a local `section_detection` analysis record.
+- Section detection is rule-based and depends on clear extracted headings; unusual heading names, badly extracted layout, or unsupported sections may be classified as unknown or kept inside the nearest known section.
 - Extraction failures do not fail the upload; the response uses `status="extraction_failed"` and includes `extraction_error`.
 - PDFs with very little extractable text use `status="ocr_needed"` and include an OCR warning in `extraction_error`.
 - Internal storage fields such as `file_path`, `stored_filename`, `extracted_text_path`, and `cleaned_text_path` are not exposed in the response.
@@ -176,4 +178,4 @@ Validation behavior:
 
 The Project and Document APIs are local-first and do not require authentication in the current MVP. Project ownership is represented by nullable `user_id` fields in the database, but login and permissions are intentionally out of scope for the current foundation.
 
-The document upload endpoint stores the PDF, creates metadata, attempts local text extraction, and writes internal raw/cleaned text artifacts. It does not run search, call Ollama, call cloud APIs, summarize, or generate reports. Those workflows belong to later milestones.
+The document upload endpoint stores the PDF, creates metadata, attempts local text extraction, writes internal raw/cleaned text artifacts, and stores rule-based section detection output as local analysis data. It does not run search, call Ollama, call cloud APIs, summarize, or generate reports. Those workflows belong to later milestones.

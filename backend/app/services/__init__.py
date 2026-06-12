@@ -8,11 +8,13 @@ from backend.app.services.document_extraction import (
 )
 from backend.app.services.document_service import (
     OCR_NEEDED_MESSAGE,
+    DocumentProcessingError,
     DocumentStorageError,
     SavedDocumentFile,
     TextProcessingArtifacts,
     count_words,
     create_document_record,
+    create_section_detection_analysis,
     is_ocr_likely_needed,
     list_documents_by_project,
     save_text_processing_artifacts,
@@ -36,6 +38,12 @@ from backend.app.services.project_service import (
     list_projects,
     update_project,
 )
+from backend.app.services.section_detection import (
+    DetectedSection,
+    SectionType,
+    classify_heading,
+    detect_sections,
+)
 from backend.app.services.text_cleaning import (
     CleaningStatistics,
     TextCleaningResult,
@@ -54,7 +62,10 @@ __all__ = [
     "build_cleaning_warnings",
     "calculate_cleaning_statistics",
     "CleaningStatistics",
+    "classify_heading",
     "clean_text",
+    "create_section_detection_analysis",
+    "DocumentProcessingError",
     "DocumentStorageError",
     "ExtractedPDF",
     "OCR_NEEDED_MESSAGE",
@@ -68,6 +79,8 @@ __all__ = [
     "create_document_record",
     "create_project",
     "delete_project",
+    "DetectedSection",
+    "detect_sections",
     "ensure_path_within_directory",
     "ensure_project_documents_dir",
     "extract_pdf_text",
@@ -86,6 +99,7 @@ __all__ = [
     "save_uploaded_file",
     "save_text_processing_artifacts",
     "sanitize_upload_filename",
+    "SectionType",
     "TextCleaningResult",
     "update_document_extraction_metadata",
     "update_document_status",

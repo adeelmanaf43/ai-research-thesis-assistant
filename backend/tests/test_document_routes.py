@@ -1,3 +1,4 @@
+import json
 from collections.abc import Generator
 from pathlib import Path
 
@@ -14,10 +15,11 @@ from backend.app.core.database import (
     init_database,
 )
 from backend.app.main import create_app
+from backend.app.models.analysis import Analysis
 from backend.app.models.document import Document
 from backend.app.schemas.project import ProjectCreate
 from backend.app.services.document_extraction import ExtractedPDF
-from backend.app.services.document_service import DocumentStorageError
+from backend.app.services.document_service import DocumentProcessingError, DocumentStorageError
 from backend.app.services.project_service import create_project
 
 
@@ -242,6 +244,60 @@ async def test_upload_document_route_uses_mocked_normal_extraction(
 
 
 @pytest.mark.anyio
+async def test_upload_document_route_stores_section_detection_analysis(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_id = _create_project(document_api_settings)
+
+    def fake_extract_pdf_text(_: Path) -> ExtractedPDF:
+        return ExtractedPDF(
+            page_count=4,
+            metadata={"title": "Structured"},
+            page_texts=[
+                "Structured Thesis Assistant\n\n"
+                "Abstract\n"
+                "This abstract has enough words for section detection and upload success.\n\n"
+                "Introduction\n"
+                "This introduction explains the local research workflow.\n\n"
+                "References\n"
+                "Smith, J. Local Research."
+            ],
+        )
+
+    monkeypatch.setattr("backend.app.api.routes_documents.extract_pdf_text", fake_extract_pdf_text)
+
+    async with document_api_client as client:
+        response = await client.post(
+            f"/api/projects/{project_id}/documents",
+            files={"file": ("structured.pdf", b"fake bytes", "application/pdf")},
+        )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["status"] == "extracted"
+
+    database_engine = create_database_engine(document_api_settings)
+    session_factory = get_session_factory(database_engine)
+    with session_factory() as session:
+        analyses = session.query(Analysis).filter_by(document_id=payload["id"]).all()
+        assert len(analyses) == 1
+        analysis = analyses[0]
+        assert analysis.analysis_type == "section_detection"
+        section_payload = json.loads(analysis.content)
+        assert [section["section_type"] for section in section_payload] == [
+            "title",
+            "abstract",
+            "introduction",
+            "references",
+        ]
+        assert section_payload[1]["detected_heading"] == "Abstract"
+        assert section_payload[1]["confidence"] == 0.95
+    database_engine.dispose()
+
+
+@pytest.mark.anyio
 async def test_upload_document_route_uses_mocked_empty_text_detection(
     document_api_client: httpx.AsyncClient,
     document_api_settings: Settings,
@@ -304,6 +360,42 @@ async def test_upload_document_route_reports_text_artifact_storage_failure(
     assert payload["word_count"] == 10
     assert payload["status"] == "text_processing_failed"
     assert "text artifact disk unavailable" in payload["extraction_error"]
+
+
+@pytest.mark.anyio
+async def test_upload_document_route_reports_section_analysis_storage_failure(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_id = _create_project(document_api_settings)
+
+    def fake_extract_pdf_text(_: Path) -> ExtractedPDF:
+        return ExtractedPDF(
+            page_count=1,
+            metadata={},
+            page_texts=["Abstract\nThis document has enough words for local processing success."],
+        )
+
+    def fail_create_section_detection_analysis(*args, **kwargs):
+        raise DocumentProcessingError("section analysis unavailable")
+
+    monkeypatch.setattr("backend.app.api.routes_documents.extract_pdf_text", fake_extract_pdf_text)
+    monkeypatch.setattr(
+        "backend.app.api.routes_documents.create_section_detection_analysis",
+        fail_create_section_detection_analysis,
+    )
+
+    async with document_api_client as client:
+        response = await client.post(
+            f"/api/projects/{project_id}/documents",
+            files={"file": ("paper.pdf", b"fake pdf bytes", "application/pdf")},
+        )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["status"] == "section_detection_failed"
+    assert "section analysis unavailable" in payload["extraction_error"]
 
 
 @pytest.mark.anyio
