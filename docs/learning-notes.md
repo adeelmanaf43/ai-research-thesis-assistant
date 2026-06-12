@@ -1,6 +1,6 @@
-# Week 1 Learning Notes
+# Project Learning Notes
 
-These notes explain what was built in Week 1 and how to discuss it in interviews.
+These notes explain what has been built so far and how to discuss the architecture, local-first decisions, and document processing pipeline in interviews.
 
 ## Product Foundation
 

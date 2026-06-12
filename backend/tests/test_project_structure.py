@@ -204,7 +204,7 @@ def test_day_four_validation_documents_upload_security() -> None:
 def test_learning_notes_cover_week_one_interview_topics() -> None:
     learning_notes = (PROJECT_ROOT / "docs" / "learning-notes.md").read_text(encoding="utf-8")
 
-    assert "Week 1 Learning Notes" in learning_notes
+    assert "Project Learning Notes" in learning_notes
     assert "local-first" in learning_notes
     assert "service layer" in learning_notes
     assert "PDF Upload API" in learning_notes
