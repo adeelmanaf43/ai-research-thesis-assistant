@@ -1,5 +1,14 @@
 """Domain service boundary for application workflows."""
 
+from backend.app.services.chunking import (
+    DEFAULT_CHUNK_SIZE_WORDS,
+    DEFAULT_OVERLAP_WORDS,
+    ChunkPersistenceError,
+    TextChunk,
+    replace_document_chunks,
+    split_sections_into_chunks,
+    split_text_into_chunks,
+)
 from backend.app.services.document_extraction import (
     ExtractedPDF,
     PDFExtractionDependencyError,
@@ -62,9 +71,12 @@ __all__ = [
     "build_cleaning_warnings",
     "calculate_cleaning_statistics",
     "CleaningStatistics",
+    "ChunkPersistenceError",
     "classify_heading",
     "clean_text",
     "create_section_detection_analysis",
+    "DEFAULT_CHUNK_SIZE_WORDS",
+    "DEFAULT_OVERLAP_WORDS",
     "DocumentProcessingError",
     "DocumentStorageError",
     "ExtractedPDF",
@@ -95,11 +107,15 @@ __all__ = [
     "remove_control_characters",
     "remove_repeated_page_artifacts",
     "repair_hyphenated_line_breaks",
+    "replace_document_chunks",
     "run_text_cleaning_pipeline",
     "save_uploaded_file",
     "save_text_processing_artifacts",
     "sanitize_upload_filename",
     "SectionType",
+    "split_sections_into_chunks",
+    "split_text_into_chunks",
+    "TextChunk",
     "TextCleaningResult",
     "update_document_extraction_metadata",
     "update_document_status",

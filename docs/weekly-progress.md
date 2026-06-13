@@ -162,3 +162,23 @@ Still not included:
 - Exposing detected sections through API responses
 - Chunking
 - Search, Q&A, summaries, comparison, or export
+
+## Week 2 Day 4 Update
+
+Week 2 Day 4 started the deterministic chunking layer.
+
+Completed:
+
+- Added `backend/app/services/chunking.py`.
+- Added local text chunk objects with chunk index, section name, approximate page range, text, and word count.
+- Added validation for 500-800 word chunk windows and 100-150 word overlap.
+- Added support for chunking either cleaned full text or detected section text.
+- Added transactional document chunk replacement that deletes old chunks before inserting reprocessed chunks.
+- Connected chunking to upload processing after section detection.
+- Updated normal successful upload status to `processed` only after chunks are stored.
+- Documented the processed document lifecycle and processing failure statuses in the API docs.
+
+Still not included:
+
+- Exposing chunks through API responses
+- Search, Q&A, summaries, comparison, or export

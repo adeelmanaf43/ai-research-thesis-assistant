@@ -9,6 +9,7 @@ def test_hour_one_root_structure_exists() -> None:
         "backend/app/services/document_extraction.py",
         "backend/app/services/text_cleaning.py",
         "backend/app/services/section_detection.py",
+        "backend/app/services/chunking.py",
         "frontend",
         "docs",
         "sample_data",
@@ -78,10 +79,10 @@ def test_docs_do_not_hardcode_local_machine_paths() -> None:
         assert "E:/portfolio-projects" not in content
 
 
-def test_readme_reflects_current_section_detection_milestone() -> None:
+def test_readme_reflects_current_chunking_milestone() -> None:
     readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
 
-    assert "Week 2, Day 3: Section detection service." in readme
+    assert "Week 2, Day 4: Chunking service foundation." in readme
     assert "Project CRUD service layer and FastAPI routes" in readme
     assert "Safe document storage path helpers" in readme
     assert "Document service placeholders" in readme
@@ -91,6 +92,7 @@ def test_readme_reflects_current_section_detection_milestone() -> None:
     assert "Deterministic text cleaning pipeline" in readme
     assert "Internal extracted-text and cleaned-text artifacts" in readme
     assert "Rule-based section detection service" in readme
+    assert "Chunking service foundation" in readme
     assert "Ruff linting and Black formatting configuration" in readme
     assert "docs/api-reference.md" in readme
     assert "docs/weekly-progress.md" in readme
@@ -157,6 +159,9 @@ def test_api_reference_documents_current_endpoints_and_boundaries() -> None:
         "extracted_text_path",
         "cleaned_text_path",
         "No Ollama or cloud provider calls yet",
+        "Processed document lifecycle",
+        "chunking_failed",
+        "processed",
     ]
 
     for expected_text in required_content:
@@ -309,6 +314,17 @@ def test_section_detection_service_and_docs_are_present() -> None:
     assert "character start and end indexes" in architecture
     assert "section_detection analysis" in readme
     assert "`section_detection` analysis record" in architecture
+
+
+def test_chunking_service_and_docs_are_present() -> None:
+    architecture = (PROJECT_ROOT / "docs" / "architecture.md").read_text(encoding="utf-8")
+    readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert "chunking.py" in architecture
+    assert "500-800 word chunks" in architecture
+    assert "100-150 word overlap" in architecture
+    assert "Chunking service foundation" in readme
+    assert "Processed document lifecycle" in readme
 
 
 def test_week_two_day_one_validation_documents_processing_behavior() -> None:

@@ -6,7 +6,7 @@
 - Section detection output is stored internally but is not exposed through API responses yet
 - Section detection is rule-based and heading-driven; it can miss unusual headings, infer weak titles, or misclassify content when PDFs extract headings poorly
 - Section confidence scores are simple deterministic signals, not machine-learned probabilities
-- No chunking yet
+- Chunks are persisted internally during upload processing but are not exposed through API responses yet
 - No search or retrieval yet
 - No LLM provider integration yet
 - No report export yet

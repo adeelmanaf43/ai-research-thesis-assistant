@@ -90,6 +90,7 @@ def test_mvp_project_document_graph_can_exist_without_login(workspace_tmp_path: 
         assert hasattr(document, "cleaned_text_path")
         assert hasattr(document, "cleaning_warnings")
         assert chunk.id is not None
+        assert hasattr(chunk, "section_name")
         assert analysis.provider_mode == "local"
         assert chat.provider_mode == "local"
 

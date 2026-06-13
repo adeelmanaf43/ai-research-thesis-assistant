@@ -155,7 +155,7 @@ Response:
   "file_size_bytes": 1024,
   "page_count": 1,
   "word_count": 120,
-  "status": "extracted",
+  "status": "processed",
   "extraction_error": null,
   "uploaded_at": "2026-06-11T10:00:00"
 }
@@ -170,12 +170,29 @@ Validation behavior:
 - Valid PDFs are saved, parsed locally with PyMuPDF, cleaned deterministically, and stored as internal extracted/cleaned text artifacts.
 - Detected sections are stored internally as a local `section_detection` analysis record.
 - Section detection is rule-based and depends on clear extracted headings; unusual heading names, badly extracted layout, or unsupported sections may be classified as unknown or kept inside the nearest known section.
+- Chunks are stored internally after section detection; normal successful uploads return `status="processed"` only after chunk persistence succeeds.
+- Chunk persistence failures do not crash the upload; the response uses `status="chunking_failed"` and includes `extraction_error`.
 - Extraction failures do not fail the upload; the response uses `status="extraction_failed"` and includes `extraction_error`.
 - PDFs with very little extractable text use `status="ocr_needed"` and include an OCR warning in `extraction_error`.
-- Internal storage fields such as `file_path`, `stored_filename`, `extracted_text_path`, and `cleaned_text_path` are not exposed in the response.
+- Internal storage fields such as `file_path`, `stored_filename`, `extracted_text_path`, `cleaned_text_path`, and chunk records are not exposed in the response.
+
+Processed document lifecycle:
+
+```text
+upload -> save PDF -> create metadata -> extract -> clean -> save text artifacts -> detect sections -> store section analysis -> chunk -> replace chunks -> processed
+```
+
+Current document status values:
+
+- `processed`: local extraction, cleaning, section detection, and chunk storage completed.
+- `ocr_needed`: the PDF was saved, but too little text was extracted for reliable downstream use.
+- `extraction_failed`: the PDF was saved, but local parsing failed.
+- `text_processing_failed`: extraction worked, but text artifacts could not be saved.
+- `section_detection_failed`: cleaning worked, but section analysis could not be saved.
+- `chunking_failed`: section detection worked, but chunk persistence failed.
 
 ## Current API Boundaries
 
 The Project and Document APIs are local-first and do not require authentication in the current MVP. Project ownership is represented by nullable `user_id` fields in the database, but login and permissions are intentionally out of scope for the current foundation.
 
-The document upload endpoint stores the PDF, creates metadata, attempts local text extraction, writes internal raw/cleaned text artifacts, and stores rule-based section detection output as local analysis data. It does not run search, call Ollama, call cloud APIs, summarize, or generate reports. Those workflows belong to later milestones.
+The document upload endpoint stores the PDF, creates metadata, attempts local text extraction, writes internal raw/cleaned text artifacts, stores rule-based section detection output as local analysis data, and persists internal chunks. It does not run search, call Ollama, call cloud APIs, summarize, or generate reports. Those workflows belong to later milestones.

@@ -147,7 +147,7 @@ The document service foundation adds functions in `backend/app/services/document
 - `update_document_status()` updates document workflow status and rejects blank statuses.
 - `list_documents_by_project()` returns documents scoped to one project.
 
-These functions are service-layer building blocks used by the document upload API. Text cleaning, chunking, and analysis workflows are still outside this milestone.
+These functions are service-layer building blocks used by the document upload API. Text cleaning, section detection, and chunking now live in separate service modules so the route can orchestrate the pipeline without owning the processing logic.
 
 ## Document Upload API
 
@@ -172,7 +172,21 @@ Upload validation:
 - When a content type is provided, it must be `application/pdf` or `application/x-pdf`.
 - File bytes must not exceed `MAX_UPLOAD_FILE_SIZE_BYTES`.
 
-This endpoint stores the PDF file locally, creates a document metadata row, and attempts local PyMuPDF extraction. Successful extraction runs deterministic text cleaning and saves internal extracted-text and cleaned-text artifacts beside the uploaded PDF. Extraction failure does not fail the upload; the document is returned with `status="extraction_failed"` and an `extraction_error`. PDFs with very little extractable cleaned text are marked with `status="ocr_needed"` so the app can warn users without crashing.
+This endpoint stores the PDF file locally, creates a document metadata row, and attempts local PyMuPDF extraction. Successful extraction runs deterministic text cleaning, saves internal extracted-text and cleaned-text artifacts beside the uploaded PDF, detects academic sections, stores local section analysis, creates overlapping chunks, and stores those chunks transactionally. A normal successful document is returned with `status="processed"` only after chunks are stored.
+
+Document processing lifecycle:
+
+```text
+upload -> save PDF -> create metadata -> extract -> clean -> save text artifacts -> detect sections -> store section analysis -> chunk -> replace chunks -> processed
+```
+
+Failure statuses:
+
+- `extraction_failed`: upload succeeded but PDF parsing failed.
+- `text_processing_failed`: extraction worked but text artifacts could not be saved.
+- `section_detection_failed`: cleaned text existed but section analysis could not be saved.
+- `chunking_failed`: section detection worked but chunk persistence failed.
+- `ocr_needed`: very little text was extracted, so OCR may be needed later.
 
 Upload validation tests use both small fake file bytes and generated local PDFs. They verify routing, validation, local saving, extraction metadata, and safe fallback when parsing fails.
 

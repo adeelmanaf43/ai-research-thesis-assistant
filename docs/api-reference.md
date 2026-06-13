@@ -214,7 +214,7 @@ Expected status:
 
 ## Documents
 
-Document endpoints currently support PDF upload, metadata storage, local PyMuPDF extraction, deterministic text cleaning, and internal rule-based section detection. They do not chunk, summarize, search, or run AI analysis yet.
+Document endpoints currently support PDF upload, metadata storage, local PyMuPDF extraction, deterministic text cleaning, internal rule-based section detection, and internal chunk persistence. They do not summarize, search, or run AI analysis yet.
 
 ### `POST /api/projects/{project_id}/documents`
 
@@ -243,7 +243,7 @@ Example response:
   "file_size_bytes": 1024,
   "page_count": 1,
   "word_count": 120,
-  "status": "extracted",
+  "status": "processed",
   "extraction_error": null,
   "uploaded_at": "2026-06-11T10:00:00"
 }
@@ -262,17 +262,46 @@ Expected status:
 Extraction behavior:
 
 - Valid PDFs are parsed locally with PyMuPDF after saving.
-- Successful extraction runs deterministic text cleaning, saves internal `.extracted.txt` and `.cleaned.txt` artifacts, sets `status` to `extracted`, populates `page_count`, and populates `word_count`.
+- Successful extraction runs deterministic text cleaning, saves internal `.extracted.txt` and `.cleaned.txt` artifacts, populates `page_count`, and populates `word_count`.
 - Section detection runs on cleaned text and stores structured sections in an internal `section_detection` analysis record.
+- Chunking runs after section detection and stores internal chunks. Normal successful documents use `status` value `processed` only after chunks are stored.
 - PDFs that save successfully but cannot be parsed still return `201 Created`.
 - Extraction failures set `status` to `extraction_failed` and return `extraction_error`.
 - PDFs with very little extractable text use `status` value `ocr_needed` and return an OCR warning in `extraction_error`.
+
+Processed document lifecycle:
+
+```text
+upload PDF
+  -> save original file locally
+  -> create document metadata row
+  -> extract text with PyMuPDF
+  -> clean extracted text
+  -> save internal extracted/cleaned text artifacts
+  -> detect academic sections
+  -> store internal section_detection analysis
+  -> create overlapping chunks with section metadata
+  -> replace stored chunks transactionally
+  -> mark document status as processed
+```
+
+Failure status meanings:
+
+| Status                     | Meaning                                                              |
+| -------------------------- | -------------------------------------------------------------------- |
+| `processed`                | Text was extracted, cleaned, sectioned, chunked, and chunks stored   |
+| `ocr_needed`               | Upload saved, but very little text was extractable                   |
+| `extraction_failed`        | Upload saved, but local PDF parsing failed                           |
+| `text_processing_failed`   | Upload and extraction worked, but text artifact storage failed       |
+| `section_detection_failed` | Cleaning worked, but section analysis storage failed                 |
+| `chunking_failed`          | Section detection worked, but chunk storage failed                   |
 
 Response boundary:
 
 - `file_path` is intentionally not exposed.
 - `stored_filename` is intentionally not exposed.
 - `extracted_text_path` and `cleaned_text_path` are intentionally not exposed.
+- Chunk records are intentionally not exposed through this upload response.
 - The original filename is returned for user clarity.
 - Saved files remain under the configured local upload directory.
 
@@ -283,7 +312,7 @@ Response boundary:
 - Section detection output is stored internally but is not exposed through API responses yet.
 - Section detection is rule-based and depends on extracted heading text. It can miss non-standard academic structures, merge unsupported sections into the nearest known section, or infer a weak title from the first non-empty line.
 - Section confidence values are explainable heuristic scores, not statistical model confidence.
-- No chunking yet.
+- Chunks are stored internally but are not exposed through API responses yet.
 - No search, retrieval, RAG, Q&A, summaries, comparison, or export yet.
 - No auth or permissions layer yet.
 - No Ollama or cloud provider calls yet.

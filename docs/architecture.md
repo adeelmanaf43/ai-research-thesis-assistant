@@ -51,6 +51,8 @@ Section detection starts in `backend/app/services/section_detection.py`. It uses
 
 The section detector is intentionally explainable rather than intelligent. It depends on headings extracted from the PDF text, so unusual section names, damaged PDF layout, OCR-only documents, or headings split across lines can reduce accuracy. Unsupported headings are preserved inside the nearest known section instead of being discarded, and heuristic confidence values are used only as local processing hints.
 
+Chunking starts in `backend/app/services/chunking.py`. It splits cleaned text or detected section text into local `TextChunk` objects with `chunk_index`, `section_name`, approximate `page_start` and `page_end`, text, and word count. Chunk settings are validated so standard processing uses 500-800 word chunks with 100-150 word overlap. The service can replace stored chunks for a document transactionally by deleting stale chunks and inserting the new chunk set in one database commit. It does not call AI providers.
+
 ## Project API
 
 Project routes live in `backend/app/api/routes_projects.py` and are mounted under `/api/projects`. They remain thin FastAPI handlers over the project service layer.
@@ -63,4 +65,4 @@ Document upload routes live in `backend/app/api/routes_documents.py` and are mou
 
 The storage foundation defines safe local path helpers used by the upload endpoint. Filenames are sanitized before storage, project IDs must be positive integers, and resolved paths are checked so path traversal cannot escape the configured upload directory.
 
-The document upload API saves PDF bytes, creates document metadata records, then attempts local extraction. Successful extraction runs deterministic text cleaning and saves separate `.extracted.txt` and `.cleaned.txt` artifacts beside the uploaded PDF. The original PDF is left untouched. Failed extraction keeps the upload successful and stores an extraction error. Very low cleaned text is marked `ocr_needed` so scanned or empty PDFs can be flagged without requiring OCR yet. Section detection runs on cleaned text and stores structured sections in a local `section_detection` analysis record. Chunking is still a later Week 2 step.
+The document upload API saves PDF bytes, creates document metadata records, then attempts local extraction. Successful extraction runs deterministic text cleaning and saves separate `.extracted.txt` and `.cleaned.txt` artifacts beside the uploaded PDF. The original PDF is left untouched. Failed extraction keeps the upload successful and stores an extraction error. Very low cleaned text is marked `ocr_needed` so scanned or empty PDFs can be flagged without requiring OCR yet. Section detection runs on cleaned text and stores structured sections in a local `section_detection` analysis record. Chunking runs after section detection and replaces stored chunks transactionally. Normal successful documents become `processed` only after chunks are stored.

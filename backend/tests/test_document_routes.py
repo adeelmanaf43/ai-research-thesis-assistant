@@ -16,8 +16,10 @@ from backend.app.core.database import (
 )
 from backend.app.main import create_app
 from backend.app.models.analysis import Analysis
+from backend.app.models.chunk import Chunk
 from backend.app.models.document import Document
 from backend.app.schemas.project import ProjectCreate
+from backend.app.services.chunking import ChunkPersistenceError
 from backend.app.services.document_extraction import ExtractedPDF
 from backend.app.services.document_service import DocumentProcessingError, DocumentStorageError
 from backend.app.services.project_service import create_project
@@ -131,7 +133,7 @@ async def test_upload_document_route_extracts_valid_pdf_metadata(
     payload = response.json()
     assert payload["page_count"] == 1
     assert payload["word_count"] == 11
-    assert payload["status"] == "extracted"
+    assert payload["status"] == "processed"
     assert payload["extraction_error"] is None
     assert "extracted_text_path" not in payload
     assert "cleaned_text_path" not in payload
@@ -239,7 +241,7 @@ async def test_upload_document_route_uses_mocked_normal_extraction(
     payload = response.json()
     assert payload["page_count"] == 2
     assert payload["word_count"] == 17
-    assert payload["status"] == "extracted"
+    assert payload["status"] == "processed"
     assert payload["extraction_error"] is None
 
 
@@ -276,7 +278,7 @@ async def test_upload_document_route_stores_section_detection_analysis(
 
     assert response.status_code == 201
     payload = response.json()
-    assert payload["status"] == "extracted"
+    assert payload["status"] == "processed"
 
     database_engine = create_database_engine(document_api_settings)
     session_factory = get_session_factory(database_engine)
@@ -294,6 +296,15 @@ async def test_upload_document_route_stores_section_detection_analysis(
         ]
         assert section_payload[1]["detected_heading"] == "Abstract"
         assert section_payload[1]["confidence"] == 0.95
+        chunks = session.query(Chunk).filter_by(document_id=payload["id"]).all()
+        assert len(chunks) == 4
+        assert [chunk.chunk_index for chunk in chunks] == [0, 1, 2, 3]
+        assert [chunk.section_name for chunk in chunks] == [
+            "Title",
+            "Abstract",
+            "Introduction",
+            "References",
+        ]
     database_engine.dispose()
 
 
@@ -396,6 +407,45 @@ async def test_upload_document_route_reports_section_analysis_storage_failure(
     payload = response.json()
     assert payload["status"] == "section_detection_failed"
     assert "section analysis unavailable" in payload["extraction_error"]
+
+
+@pytest.mark.anyio
+async def test_upload_document_route_reports_chunk_storage_failure(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project_id = _create_project(document_api_settings)
+
+    def fake_extract_pdf_text(_: Path) -> ExtractedPDF:
+        return ExtractedPDF(
+            page_count=2,
+            metadata={},
+            page_texts=[
+                "Abstract\n"
+                "This document has enough words for section detection and chunk storage."
+            ],
+        )
+
+    def fail_replace_document_chunks(*args, **kwargs):
+        raise ChunkPersistenceError("chunk database unavailable")
+
+    monkeypatch.setattr("backend.app.api.routes_documents.extract_pdf_text", fake_extract_pdf_text)
+    monkeypatch.setattr(
+        "backend.app.api.routes_documents.replace_document_chunks",
+        fail_replace_document_chunks,
+    )
+
+    async with document_api_client as client:
+        response = await client.post(
+            f"/api/projects/{project_id}/documents",
+            files={"file": ("paper.pdf", b"fake pdf bytes", "application/pdf")},
+        )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["status"] == "chunking_failed"
+    assert "chunk database unavailable" in payload["extraction_error"]
 
 
 @pytest.mark.anyio

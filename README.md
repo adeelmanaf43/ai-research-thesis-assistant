@@ -109,7 +109,7 @@ Run the frontend:
 
 ## Current Features
 
-Week 2, Day 3: Section detection service.
+Week 2, Day 4: Chunking service foundation.
 
 Included now:
 
@@ -125,11 +125,14 @@ Included now:
 - Document service placeholders for saving files, creating records, status updates, and project-scoped document fetches
 - PDF-only document upload API with project existence, extension, content type, and size validation
 - Local PDF text extraction service using PyMuPDF
-- Upload-time extraction metadata with page count, word count, `extracted`, `extraction_failed`, and `ocr_needed` statuses
+- Upload-time processing metadata with page count, word count, `processed`, `extraction_failed`, `ocr_needed`, and processing failure statuses
 - Deterministic text cleaning pipeline with original text, cleaned text, cleaning statistics, and warnings
 - Internal extracted-text and cleaned-text artifacts saved beside uploaded PDFs for later pipeline stages
 - Rule-based section detection service with structured section names, headings, indexes, text, confidence, and unknown fallbacks
 - Internal section_detection analysis output stored after successful upload processing
+- Chunking service foundation for cleaned text or detected section text using 500-800 word chunks and 100-150 word overlap
+- Transactional chunk replacement service that clears stale document chunks before inserting reprocessed chunks
+- Processed document lifecycle documented from upload through chunk persistence
 - Ruff linting and Black formatting configuration
 - Pytest setup and foundation tests
 - Documentation starter set
@@ -156,7 +159,7 @@ curl.exe -X POST "http://127.0.0.1:8000/api/projects/1/documents" -F "file=@samp
 
 Near-term milestones:
 
-- Chunking with overlap
+- Public chunk API responses
 - Local summaries and keyword extraction
 - TF-IDF search
 - Source-grounded Q&A
@@ -174,7 +177,7 @@ Not included yet:
 - OCR processing for scanned PDFs
 - Public API access to stored cleaned text or detected section records
 - Perfect section detection for unusual headings or damaged PDF extraction output
-- Chunking
+- Public chunk API responses
 - LLM providers
 - RAG/retrieval
 - Report export
@@ -183,7 +186,7 @@ Not included yet:
 - Docker
 - Cloud AI APIs
 
-The current upload API stores PDF bytes, creates document metadata, attempts local PyMuPDF extraction, runs deterministic text cleaning, saves internal raw/cleaned text artifacts, and stores detected sections as local analysis output. Section detection is rule-based and explainable, not a replacement for semantic document understanding. The app does not summarize or analyze document content with AI yet.
+The current upload API stores PDF bytes, creates document metadata, attempts local PyMuPDF extraction, runs deterministic text cleaning, saves internal raw/cleaned text artifacts, stores detected sections as local analysis output, and persists internal chunks after successful section detection. Section detection is rule-based and explainable, not a replacement for semantic document understanding. The app does not summarize or analyze document content with AI yet.
 
 ## Screenshots
 

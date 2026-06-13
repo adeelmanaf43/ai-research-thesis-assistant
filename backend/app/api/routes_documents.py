@@ -6,6 +6,11 @@ from sqlalchemy.orm import Session
 from backend.app.core.config import Settings, get_settings
 from backend.app.core.database import get_db
 from backend.app.schemas.document import DocumentCreate, DocumentResponse
+from backend.app.services.chunking import (
+    ChunkPersistenceError,
+    replace_document_chunks,
+    split_sections_into_chunks,
+)
 from backend.app.services.document_extraction import PDFExtractionError, extract_pdf_text
 from backend.app.services.document_service import (
     OCR_NEEDED_MESSAGE,
@@ -134,6 +139,22 @@ async def upload_document_route(
             cleaning_warnings=cleaning_result.warnings,
         )
 
+    chunks = split_sections_into_chunks(sections, page_count=extracted_pdf.page_count)
+    try:
+        replace_document_chunks(db, document.id, chunks)
+    except ChunkPersistenceError as exc:
+        return update_document_extraction_metadata(
+            db,
+            document,
+            page_count=extracted_pdf.page_count,
+            word_count=word_count,
+            status="chunking_failed",
+            extraction_error=str(exc),
+            extracted_text_path=text_artifacts.extracted_text_path,
+            cleaned_text_path=text_artifacts.cleaned_text_path,
+            cleaning_warnings=cleaning_result.warnings,
+        )
+
     if is_ocr_likely_needed(word_count):
         return update_document_extraction_metadata(
             db,
@@ -152,7 +173,7 @@ async def upload_document_route(
         document,
         page_count=extracted_pdf.page_count,
         word_count=word_count,
-        status="extracted",
+        status="processed",
         extracted_text_path=text_artifacts.extracted_text_path,
         cleaned_text_path=text_artifacts.cleaned_text_path,
         cleaning_warnings=cleaning_result.warnings,
