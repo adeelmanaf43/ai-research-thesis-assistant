@@ -18,10 +18,16 @@ from backend.app.main import create_app
 from backend.app.models.analysis import Analysis
 from backend.app.models.chunk import Chunk
 from backend.app.models.document import Document
+from backend.app.schemas.document import DocumentCreate
 from backend.app.schemas.project import ProjectCreate
 from backend.app.services.chunking import ChunkPersistenceError
 from backend.app.services.document_extraction import ExtractedPDF
-from backend.app.services.document_service import DocumentProcessingError, DocumentStorageError
+from backend.app.services.document_service import (
+    OCR_NEEDED_MESSAGE,
+    DocumentProcessingError,
+    DocumentStorageError,
+    create_document_record,
+)
 from backend.app.services.project_service import create_project
 
 
@@ -75,6 +81,45 @@ def _create_project(settings: Settings) -> int:
     return project_id
 
 
+def _create_document_metadata(
+    settings: Settings,
+    *,
+    project_id: int | None = None,
+    filename: str = "paper.pdf",
+    status: str = "processed",
+    page_count: int | None = 1,
+    word_count: int | None = 20,
+) -> int:
+    database_engine = create_database_engine(settings)
+    session_factory = get_session_factory(database_engine)
+    with session_factory() as session:
+        if project_id is None:
+            project = create_project(session, ProjectCreate(name="Document project"))
+            project_id = project.id
+
+        document = create_document_record(
+            session,
+            DocumentCreate(
+                project_id=project_id,
+                original_filename=filename,
+                mime_type="application/pdf",
+                file_size_bytes=128,
+            ),
+            stored_filename=f"stored-{filename}",
+            file_path=settings.upload_dir / filename,
+            status=status,
+        )
+        document.page_count = page_count
+        document.word_count = word_count
+        session.add(document)
+        session.commit()
+        session.refresh(document)
+        document_id = document.id
+
+    database_engine.dispose()
+    return document_id
+
+
 def _pdf_bytes(page_text: str) -> bytes:
     document = fitz.open()
     page = document.new_page()
@@ -111,6 +156,201 @@ async def test_upload_document_route_accepts_pdf_and_creates_record(
     assert "file_path" not in payload
     assert "stored_filename" not in payload
     assert len(list(document_api_settings.upload_dir.rglob("*.pdf"))) == 1
+
+
+@pytest.mark.anyio
+async def test_list_project_documents_route_returns_project_documents(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    project_id = _create_project(document_api_settings)
+    _create_document_metadata(
+        document_api_settings,
+        project_id=project_id,
+        filename="first.pdf",
+    )
+    _create_document_metadata(
+        document_api_settings,
+        project_id=project_id,
+        filename="second.pdf",
+        status="ocr_needed",
+        page_count=2,
+        word_count=3,
+    )
+
+    async with document_api_client as client:
+        response = await client.get(f"/api/projects/{project_id}/documents")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert [document["original_filename"] for document in payload] == [
+        "second.pdf",
+        "first.pdf",
+    ]
+    assert payload[0]["status"] == "ocr_needed"
+    assert payload[0]["page_count"] == 2
+    assert payload[0]["word_count"] == 3
+    assert "file_path" not in payload[0]
+    assert "stored_filename" not in payload[0]
+
+
+@pytest.mark.anyio
+async def test_list_project_documents_route_returns_404_for_missing_project(
+    document_api_client: httpx.AsyncClient,
+) -> None:
+    async with document_api_client as client:
+        response = await client.get("/api/projects/999/documents")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == (
+        "Project not found. Create the project before listing documents."
+    )
+
+
+@pytest.mark.anyio
+async def test_get_document_overview_route_returns_processed_document_summary(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    document_id = _create_document_metadata(document_api_settings)
+
+    database_engine = create_database_engine(document_api_settings)
+    session_factory = get_session_factory(database_engine)
+    with session_factory() as session:
+        document = session.get(Document, document_id)
+        assert document is not None
+        document.cleaning_warnings = "Removed repeated page header"
+        session.add_all(
+            [
+                Analysis(
+                    project_id=document.project_id,
+                    document_id=document.id,
+                    analysis_type="section_detection",
+                    title="Detected sections",
+                    content=json.dumps(
+                        [
+                            {
+                                "section_name": "Abstract",
+                                "detected_heading": "Abstract",
+                                "confidence": 0.95,
+                            }
+                        ]
+                    ),
+                    provider_mode="local",
+                ),
+                Chunk(
+                    document_id=document.id,
+                    chunk_index=0,
+                    section_name="Abstract",
+                    text="chunk text",
+                    word_count=2,
+                    page_start=1,
+                    page_end=1,
+                ),
+            ]
+        )
+        session.commit()
+    database_engine.dispose()
+
+    async with document_api_client as client:
+        response = await client.get(f"/api/documents/{document_id}/overview")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["document_id"] == document_id
+    assert payload["filename"] == "paper.pdf"
+    assert payload["status"] == "processed"
+    assert payload["page_count"] == 1
+    assert payload["word_count"] == 20
+    assert payload["chunk_count"] == 1
+    assert payload["detected_sections"] == [
+        {
+            "section_name": "Abstract",
+            "detected_heading": "Abstract",
+            "confidence": 0.95,
+        }
+    ]
+    assert payload["extraction_warnings"] == ["Removed repeated page header"]
+    assert payload["processing_summary"] == {
+        "status": "processed",
+        "message": "Document processed locally with 1 detected sections and 1 stored chunks.",
+        "is_complete": True,
+        "requires_attention": False,
+        "next_step": "Review the overview or continue with the next local analysis step.",
+    }
+
+
+@pytest.mark.anyio
+async def test_get_document_overview_route_returns_ocr_warning_summary(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    document_id = _create_document_metadata(
+        document_api_settings,
+        filename="scanned.pdf",
+        status="ocr_needed",
+        page_count=1,
+        word_count=1,
+    )
+
+    database_engine = create_database_engine(document_api_settings)
+    session_factory = get_session_factory(database_engine)
+    with session_factory() as session:
+        document = session.get(Document, document_id)
+        assert document is not None
+        document.extraction_error = OCR_NEEDED_MESSAGE
+        document.cleaning_warnings = "Cleaned text is very short"
+        session.add(document)
+        session.commit()
+    database_engine.dispose()
+
+    async with document_api_client as client:
+        response = await client.get(f"/api/documents/{document_id}/overview")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["document_id"] == document_id
+    assert payload["filename"] == "scanned.pdf"
+    assert payload["status"] == "ocr_needed"
+    assert payload["page_count"] == 1
+    assert payload["word_count"] == 1
+    assert payload["chunk_count"] == 0
+    assert payload["detected_sections"] == []
+    assert payload["extraction_warnings"] == [
+        OCR_NEEDED_MESSAGE,
+        "Cleaned text is very short",
+    ]
+    assert payload["processing_summary"] == {
+        "status": "ocr_needed",
+        "message": "Document was saved, but very little text was extracted. OCR may be needed.",
+        "is_complete": False,
+        "requires_attention": True,
+        "next_step": "Use a text-based PDF or add OCR support in a later workflow.",
+    }
+
+
+@pytest.mark.anyio
+async def test_get_document_overview_route_returns_404_for_missing_document(
+    document_api_client: httpx.AsyncClient,
+) -> None:
+    async with document_api_client as client:
+        response = await client.get("/api/documents/999/overview")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == (
+        "Document not found. Upload a document or use an existing document ID."
+    )
+
+
+@pytest.mark.anyio
+async def test_get_document_overview_route_returns_user_friendly_invalid_id_error(
+    document_api_client: httpx.AsyncClient,
+) -> None:
+    async with document_api_client as client:
+        response = await client.get("/api/documents/0/overview")
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Document ID must be a positive integer."
 
 
 @pytest.mark.anyio

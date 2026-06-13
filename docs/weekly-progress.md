@@ -182,3 +182,27 @@ Still not included:
 
 - Exposing chunks through API responses
 - Search, Q&A, summaries, comparison, or export
+
+## Week 2 Day 5 Update
+
+Week 2 Day 5 started the local document overview layer.
+
+Completed:
+
+- Added `backend/app/services/document_overview.py`.
+- Added a document overview object with filename, status, page count, word count, chunk count, detected sections, extraction warnings, and structured processing summary.
+- Read detected section names from the stored internal `section_detection` analysis output.
+- Counted stored chunks from the local `chunks` table.
+- Combined extraction errors and cleaning warnings into a user-facing warning list.
+- Added tests for processed documents, OCR warnings, missing documents, invalid document IDs, malformed section analysis, and latest section analysis selection.
+- Added `GET /api/projects/{project_id}/documents` to list documents for one project.
+- Added `GET /api/documents/{document_id}/overview` to expose the local overview safely.
+- Added API tests for project document listing, missing project handling, overview success, and missing document handling.
+- Added a public processing summary response with status, user-facing message, completion flag, attention flag, and next-step guidance.
+- Added Streamlit document overview lookup that calls the local backend when available and handles connection errors clearly.
+- Added frontend tests for overview URL creation, invalid document IDs, mocked backend responses, and backend connection failures.
+
+Still not included:
+
+- Full frontend project creation, upload, and document management workflow
+- Search, Q&A, summaries, comparison, or export

@@ -30,3 +30,29 @@ class DocumentResponse(BaseModel):
     status: str
     extraction_error: str | None = None
     uploaded_at: datetime
+
+
+class SectionOverviewResponse(BaseModel):
+    section_name: str
+    detected_heading: str
+    confidence: float = Field(ge=0.0, le=1.0)
+
+
+class ProcessingSummaryResponse(BaseModel):
+    status: str
+    message: str
+    is_complete: bool
+    requires_attention: bool
+    next_step: str | None = None
+
+
+class DocumentOverviewResponse(BaseModel):
+    document_id: int
+    filename: str
+    status: str
+    page_count: int | None = None
+    word_count: int | None = None
+    chunk_count: int
+    detected_sections: list[SectionOverviewResponse]
+    extraction_warnings: list[str]
+    processing_summary: ProcessingSummaryResponse

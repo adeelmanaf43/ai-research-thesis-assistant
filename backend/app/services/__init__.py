@@ -15,6 +15,12 @@ from backend.app.services.document_extraction import (
     PDFExtractionError,
     extract_pdf_text,
 )
+from backend.app.services.document_overview import (
+    DocumentOverview,
+    ProcessingSummary,
+    SectionOverview,
+    get_document_overview,
+)
 from backend.app.services.document_service import (
     OCR_NEEDED_MESSAGE,
     DocumentProcessingError,
@@ -78,11 +84,13 @@ __all__ = [
     "DEFAULT_CHUNK_SIZE_WORDS",
     "DEFAULT_OVERLAP_WORDS",
     "DocumentProcessingError",
+    "DocumentOverview",
     "DocumentStorageError",
     "ExtractedPDF",
     "OCR_NEEDED_MESSAGE",
     "PDFExtractionDependencyError",
     "PDFExtractionError",
+    "ProcessingSummary",
     "SavedDocumentFile",
     "TextProcessingArtifacts",
     "UnsafeStoragePathError",
@@ -97,6 +105,7 @@ __all__ = [
     "ensure_project_documents_dir",
     "extract_pdf_text",
     "get_document_storage_path",
+    "get_document_overview",
     "get_project_by_id",
     "get_project_documents_dir",
     "is_ocr_likely_needed",
@@ -113,6 +122,7 @@ __all__ = [
     "save_text_processing_artifacts",
     "sanitize_upload_filename",
     "SectionType",
+    "SectionOverview",
     "split_sections_into_chunks",
     "split_text_into_chunks",
     "TextChunk",

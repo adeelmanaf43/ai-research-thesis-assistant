@@ -20,7 +20,9 @@ http://127.0.0.1:8000
 | `GET`    | `/api/projects/{project_id}`           | Fetch one project by ID                 |
 | `PATCH`  | `/api/projects/{project_id}`           | Update project name or description      |
 | `DELETE` | `/api/projects/{project_id}`           | Delete a project                        |
+| `GET`    | `/api/projects/{project_id}/documents` | List documents in one project           |
 | `POST`   | `/api/projects/{project_id}/documents` | Upload one PDF into an existing project |
+| `GET`    | `/api/documents/{document_id}/overview` | Fetch local document processing overview |
 
 ## Health
 
@@ -216,6 +218,45 @@ Expected status:
 
 Document endpoints currently support PDF upload, metadata storage, local PyMuPDF extraction, deterministic text cleaning, internal rule-based section detection, and internal chunk persistence. They do not summarize, search, or run AI analysis yet.
 
+### `GET /api/projects/{project_id}/documents`
+
+Lists documents for one existing project, newest first.
+
+Example request:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/projects/1/documents"
+```
+
+Example response:
+
+```json
+[
+  {
+    "id": 1,
+    "project_id": 1,
+    "original_filename": "invoice_GAF-175351693.pdf",
+    "mime_type": "application/pdf",
+    "file_size_bytes": 1024,
+    "page_count": 1,
+    "word_count": 120,
+    "status": "processed",
+    "extraction_error": null,
+    "uploaded_at": "2026-06-11T10:00:00"
+  }
+]
+```
+
+Expected status:
+
+- `200 OK` when the project exists.
+- `404 Not Found` when the project does not exist.
+
+Response boundary:
+
+- Internal storage fields are not exposed.
+- Cleaned text paths, extracted text paths, and raw chunk records are not exposed.
+
 ### `POST /api/projects/{project_id}/documents`
 
 Uploads one PDF file into an existing project.
@@ -296,6 +337,63 @@ Failure status meanings:
 | `section_detection_failed` | Cleaning worked, but section analysis storage failed                 |
 | `chunking_failed`          | Section detection worked, but chunk storage failed                   |
 
+### `GET /api/documents/{document_id}/overview`
+
+Returns a local processing overview for one document.
+
+Example request:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/overview"
+```
+
+Example response:
+
+```json
+{
+  "document_id": 1,
+  "filename": "invoice_GAF-175351693.pdf",
+  "status": "processed",
+  "page_count": 1,
+  "word_count": 120,
+  "chunk_count": 3,
+  "detected_sections": [
+    {
+      "section_name": "Title",
+      "detected_heading": "Title",
+      "confidence": 0.75
+    }
+  ],
+  "extraction_warnings": [],
+  "processing_summary": {
+    "status": "processed",
+    "message": "Document processed locally with 1 detected sections and 3 stored chunks.",
+    "is_complete": true,
+    "requires_attention": false,
+    "next_step": "Review the overview or continue with the next local analysis step."
+  }
+}
+```
+
+Expected status:
+
+- `200 OK` when the document exists.
+- `404 Not Found` when the document does not exist.
+- `422 Unprocessable Entity` when the document ID is not a positive integer.
+
+Overview behavior:
+
+- `chunk_count` is counted from stored local chunk rows.
+- `detected_sections` is read from the latest stored `section_detection` analysis.
+- `extraction_warnings` combines extraction errors and cleaning warnings.
+- `processing_summary` is structured for frontend use and includes status, message, completion state, attention state, and next-step guidance.
+- No AI provider, Ollama model, or cloud API is called.
+
+User-friendly errors:
+
+- Missing documents return `Document not found. Upload a document or use an existing document ID.`
+- Invalid document IDs return `Document ID must be a positive integer.`
+
 Response boundary:
 
 - `file_path` is intentionally not exposed.
@@ -309,10 +407,10 @@ Response boundary:
 
 - No OCR processing for scanned PDFs yet.
 - Text cleaning artifacts are stored internally but are not exposed through API responses yet.
-- Section detection output is stored internally but is not exposed through API responses yet.
+- Section detection output is exposed only as safe overview metadata, not as raw full section text.
 - Section detection is rule-based and depends on extracted heading text. It can miss non-standard academic structures, merge unsupported sections into the nearest known section, or infer a weak title from the first non-empty line.
 - Section confidence values are explainable heuristic scores, not statistical model confidence.
-- Chunks are stored internally but are not exposed through API responses yet.
+- Chunks are stored internally; only aggregate `chunk_count` is exposed through the overview response.
 - No search, retrieval, RAG, Q&A, summaries, comparison, or export yet.
 - No auth or permissions layer yet.
 - No Ollama or cloud provider calls yet.
@@ -333,3 +431,15 @@ curl.exe -X POST "http://127.0.0.1:8020/api/projects/1/documents" -F "file=@samp
 ```
 
 The upload response should include `page_count`, `word_count`, `status`, and `extraction_error`.
+
+List uploaded project documents:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8020/api/projects/1/documents"
+```
+
+Fetch the document overview:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8020/api/documents/1/overview"
+```

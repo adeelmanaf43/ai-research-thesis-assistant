@@ -6,7 +6,9 @@ from pydantic import ValidationError
 from backend.app.schemas import (
     DocumentCreate,
     DocumentMetadataUpdate,
+    DocumentOverviewResponse,
     DocumentResponse,
+    ProcessingSummaryResponse,
     ProjectCreate,
     ProjectDetailResponse,
     ProjectListItem,
@@ -135,3 +137,55 @@ def test_document_response_excludes_internal_storage_fields() -> None:
     assert "extracted_text_path" not in payload
     assert "cleaned_text_path" not in payload
     assert "cleaning_warnings" not in payload
+
+
+def test_document_overview_response_serializes_public_overview_fields() -> None:
+    payload = DocumentOverviewResponse(
+        document_id=10,
+        filename="paper.pdf",
+        status="processed",
+        page_count=12,
+        word_count=4500,
+        chunk_count=8,
+        detected_sections=[
+            {
+                "section_name": "Abstract",
+                "detected_heading": "Abstract",
+                "confidence": 0.95,
+            }
+        ],
+        extraction_warnings=[],
+        processing_summary={
+            "status": "processed",
+            "message": "Document processed locally.",
+            "is_complete": True,
+            "requires_attention": False,
+            "next_step": None,
+        },
+    ).model_dump()
+
+    assert payload["document_id"] == 10
+    assert payload["filename"] == "paper.pdf"
+    assert payload["chunk_count"] == 8
+    assert payload["detected_sections"][0]["section_name"] == "Abstract"
+    assert payload["processing_summary"]["is_complete"] is True
+    assert "file_path" not in payload
+    assert "stored_filename" not in payload
+
+
+def test_processing_summary_response_serializes_user_facing_state() -> None:
+    payload = ProcessingSummaryResponse(
+        status="ocr_needed",
+        message="OCR may be needed.",
+        is_complete=False,
+        requires_attention=True,
+        next_step="Use a text-based PDF.",
+    ).model_dump()
+
+    assert payload == {
+        "status": "ocr_needed",
+        "message": "OCR may be needed.",
+        "is_complete": False,
+        "requires_attention": True,
+        "next_step": "Use a text-based PDF.",
+    }

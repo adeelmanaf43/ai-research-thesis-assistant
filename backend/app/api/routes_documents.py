@@ -5,13 +5,18 @@ from sqlalchemy.orm import Session
 
 from backend.app.core.config import Settings, get_settings
 from backend.app.core.database import get_db
-from backend.app.schemas.document import DocumentCreate, DocumentResponse
+from backend.app.schemas.document import (
+    DocumentCreate,
+    DocumentOverviewResponse,
+    DocumentResponse,
+)
 from backend.app.services.chunking import (
     ChunkPersistenceError,
     replace_document_chunks,
     split_sections_into_chunks,
 )
 from backend.app.services.document_extraction import PDFExtractionError, extract_pdf_text
+from backend.app.services.document_overview import get_document_overview
 from backend.app.services.document_service import (
     OCR_NEEDED_MESSAGE,
     DocumentProcessingError,
@@ -20,6 +25,7 @@ from backend.app.services.document_service import (
     create_document_record,
     create_section_detection_analysis,
     is_ocr_likely_needed,
+    list_documents_by_project,
     save_text_processing_artifacts,
     save_uploaded_file,
     update_document_extraction_metadata,
@@ -31,6 +37,7 @@ from backend.app.services.text_cleaning import run_text_cleaning_pipeline
 PDF_CONTENT_TYPES = {"application/pdf", "application/x-pdf"}
 
 router = APIRouter(prefix="/api/projects/{project_id}/documents", tags=["documents"])
+overview_router = APIRouter(prefix="/api/documents", tags=["documents"])
 
 
 def _validate_pdf_upload(file: UploadFile) -> None:
@@ -46,6 +53,43 @@ def _validate_pdf_upload(file: UploadFile) -> None:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Uploaded file content type must be application/pdf.",
         )
+
+
+@router.get("", response_model=list[DocumentResponse])
+def list_project_documents_route(
+    project_id: int,
+    db: Session = Depends(get_db),
+) -> list[DocumentResponse]:
+    project = get_project_by_id(db, project_id)
+    if project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found. Create the project before listing documents.",
+        )
+
+    return list_documents_by_project(db, project_id)
+
+
+@overview_router.get("/{document_id}/overview", response_model=DocumentOverviewResponse)
+def get_document_overview_route(
+    document_id: int,
+    db: Session = Depends(get_db),
+) -> dict:
+    try:
+        overview = get_document_overview(db, document_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+
+    if overview is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found. Upload a document or use an existing document ID.",
+        )
+
+    return overview.to_dict()
 
 
 @router.post("", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)

@@ -10,6 +10,7 @@ def test_hour_one_root_structure_exists() -> None:
         "backend/app/services/text_cleaning.py",
         "backend/app/services/section_detection.py",
         "backend/app/services/chunking.py",
+        "backend/app/services/document_overview.py",
         "frontend",
         "docs",
         "sample_data",
@@ -79,10 +80,10 @@ def test_docs_do_not_hardcode_local_machine_paths() -> None:
         assert "E:/portfolio-projects" not in content
 
 
-def test_readme_reflects_current_chunking_milestone() -> None:
+def test_readme_reflects_current_document_overview_milestone() -> None:
     readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
 
-    assert "Week 2, Day 4: Chunking service foundation." in readme
+    assert "Week 2, Day 5: Document overview API foundation." in readme
     assert "Project CRUD service layer and FastAPI routes" in readme
     assert "Safe document storage path helpers" in readme
     assert "Document service placeholders" in readme
@@ -93,6 +94,7 @@ def test_readme_reflects_current_chunking_milestone() -> None:
     assert "Internal extracted-text and cleaned-text artifacts" in readme
     assert "Rule-based section detection service" in readme
     assert "Chunking service foundation" in readme
+    assert "Document overview API" in readme
     assert "Ruff linting and Black formatting configuration" in readme
     assert "docs/api-reference.md" in readme
     assert "docs/weekly-progress.md" in readme
@@ -149,7 +151,9 @@ def test_api_reference_documents_current_endpoints_and_boundaries() -> None:
         "GET /api/projects/{project_id}",
         "PATCH /api/projects/{project_id}",
         "DELETE /api/projects/{project_id}",
+        "GET /api/projects/{project_id}/documents",
         "POST /api/projects/{project_id}/documents",
+        "GET /api/documents/{document_id}/overview",
         "Example request",
         "Example response",
         "Known Limitations",
@@ -162,6 +166,7 @@ def test_api_reference_documents_current_endpoints_and_boundaries() -> None:
         "Processed document lifecycle",
         "chunking_failed",
         "processed",
+        "chunk_count",
     ]
 
     for expected_text in required_content:
@@ -264,6 +269,9 @@ def test_week_one_followup_docs_reflect_completed_foundation() -> None:
     next_steps = (PROJECT_ROOT / "docs" / "next_steps.md").read_text(encoding="utf-8")
 
     assert "Week 2 foundation" in limitations
+    assert "safe section metadata is exposed through the document overview response" in limitations
+    assert "only aggregate `chunk_count` is exposed" in limitations
+    assert "frontend can load document overview data" in limitations
     assert "Week 2 sequence" in next_steps
     assert "Store extracted and cleaned full text" in next_steps
 
@@ -325,6 +333,18 @@ def test_chunking_service_and_docs_are_present() -> None:
     assert "100-150 word overlap" in architecture
     assert "Chunking service foundation" in readme
     assert "Processed document lifecycle" in readme
+
+
+def test_document_overview_service_and_docs_are_present() -> None:
+    architecture = (PROJECT_ROOT / "docs" / "architecture.md").read_text(encoding="utf-8")
+    readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+    weekly_progress = (PROJECT_ROOT / "docs" / "weekly-progress.md").read_text(encoding="utf-8")
+
+    assert "document_overview.py" in architecture
+    assert "filename, status, page count, word count, chunk count" in architecture
+    assert "Document overview API" in readme
+    assert "/api/documents/{document_id}/overview" in architecture
+    assert "Week 2 Day 5 Update" in weekly_progress
 
 
 def test_week_two_day_one_validation_documents_processing_behavior() -> None:

@@ -191,8 +191,69 @@ Current document status values:
 - `section_detection_failed`: cleaning worked, but section analysis could not be saved.
 - `chunking_failed`: section detection worked, but chunk persistence failed.
 
+## `GET /api/projects/{project_id}/documents`
+
+Lists documents for one existing project, newest first.
+
+PowerShell example:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/projects/1/documents"
+```
+
+Response status:
+
+- `200 OK` when the project exists.
+- `404 Not Found` when the project does not exist.
+
+The response uses the public document metadata shape and does not expose internal storage paths.
+
+## `GET /api/documents/{document_id}/overview`
+
+Returns the local processing overview for one document.
+
+PowerShell example:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/overview"
+```
+
+Response status:
+
+- `200 OK` when the document exists.
+- `404 Not Found` when the document does not exist.
+- `422 Unprocessable Entity` when the document ID is not positive.
+
+Response:
+
+```json
+{
+  "document_id": 1,
+  "filename": "invoice_GAF-175351693.pdf",
+  "status": "processed",
+  "page_count": 1,
+  "word_count": 120,
+  "chunk_count": 3,
+  "detected_sections": [
+    {
+      "section_name": "Title",
+      "detected_heading": "Title",
+      "confidence": 0.75
+    }
+  ],
+  "extraction_warnings": [],
+  "processing_summary": {
+    "status": "processed",
+    "message": "Document processed locally with 1 detected sections and 3 stored chunks.",
+    "is_complete": true,
+    "requires_attention": false,
+    "next_step": "Review the overview or continue with the next local analysis step."
+  }
+}
+```
+
 ## Current API Boundaries
 
 The Project and Document APIs are local-first and do not require authentication in the current MVP. Project ownership is represented by nullable `user_id` fields in the database, but login and permissions are intentionally out of scope for the current foundation.
 
-The document upload endpoint stores the PDF, creates metadata, attempts local text extraction, writes internal raw/cleaned text artifacts, stores rule-based section detection output as local analysis data, and persists internal chunks. It does not run search, call Ollama, call cloud APIs, summarize, or generate reports. Those workflows belong to later milestones.
+The document upload endpoint stores the PDF, creates metadata, attempts local text extraction, writes internal raw/cleaned text artifacts, stores rule-based section detection output as local analysis data, and persists internal chunks. The overview endpoint exposes safe processing metadata, section names, warnings, aggregate chunk count, and structured user-facing processing summary. It does not run search, call Ollama, call cloud APIs, summarize, or generate reports. Those workflows belong to later milestones.

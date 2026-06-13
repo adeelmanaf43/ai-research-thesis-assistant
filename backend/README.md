@@ -165,6 +165,22 @@ curl.exe -X POST "http://127.0.0.1:8000/api/projects/1/documents" -F "file=@samp
 
 Expected response status: `201 Created`.
 
+List documents for one project:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/projects/1/documents"
+```
+
+Expected response status: `200 OK`.
+
+Fetch one document overview:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/overview"
+```
+
+Expected response status: `200 OK` when document `1` exists.
+
 Upload validation:
 
 - The project must exist.
@@ -173,6 +189,8 @@ Upload validation:
 - File bytes must not exceed `MAX_UPLOAD_FILE_SIZE_BYTES`.
 
 This endpoint stores the PDF file locally, creates a document metadata row, and attempts local PyMuPDF extraction. Successful extraction runs deterministic text cleaning, saves internal extracted-text and cleaned-text artifacts beside the uploaded PDF, detects academic sections, stores local section analysis, creates overlapping chunks, and stores those chunks transactionally. A normal successful document is returned with `status="processed"` only after chunks are stored.
+
+The overview endpoint returns filename, status, page count, word count, chunk count, detected section names/headings, warnings, and a structured processing summary with a user-facing message, completion flag, attention flag, and suggested next step. It does not expose internal file paths, raw cleaned text, raw chunk text, or full section text.
 
 Document processing lifecycle:
 

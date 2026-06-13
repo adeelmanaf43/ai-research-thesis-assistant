@@ -109,12 +109,12 @@ Run the frontend:
 
 ## Current Features
 
-Week 2, Day 4: Chunking service foundation.
+Week 2, Day 5: Document overview API foundation.
 
 Included now:
 
 - FastAPI backend skeleton with health endpoints
-- Streamlit frontend skeleton
+- Streamlit frontend shell with optional backend document overview lookup
 - Local configuration using environment variables
 - SQLAlchemy SQLite database foundation
 - Base ORM models for projects, documents, chunks, analyses, and chat history
@@ -133,6 +133,9 @@ Included now:
 - Chunking service foundation for cleaned text or detected section text using 500-800 word chunks and 100-150 word overlap
 - Transactional chunk replacement service that clears stale document chunks before inserting reprocessed chunks
 - Processed document lifecycle documented from upload through chunk persistence
+- Document overview API with filename, status, page count, word count, chunk count, detected sections, warnings, and structured processing summary
+- Project-scoped document listing endpoint that hides internal storage paths
+- Streamlit document overview panel that loads backend overview data when FastAPI is running
 - Ruff linting and Black formatting configuration
 - Pytest setup and foundation tests
 - Documentation starter set
@@ -155,11 +158,20 @@ Example PDF upload:
 curl.exe -X POST "http://127.0.0.1:8000/api/projects/1/documents" -F "file=@sample_data\invoice_GAF-175351693.pdf;type=application/pdf"
 ```
 
+Example document overview:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/overview"
+```
+
+The Streamlit frontend can load this overview when the backend is running. Use the default backend URL or set `THESIS_ASSISTANT_BACKEND_URL` before launching Streamlit.
+
 ## Roadmap
 
 Near-term milestones:
 
 - Public chunk API responses
+- Full frontend project and upload workflow
 - Local summaries and keyword extraction
 - TF-IDF search
 - Source-grounded Q&A
@@ -175,7 +187,8 @@ See [project-roadmap.md](project-roadmap.md) for the full staged plan.
 Not included yet:
 
 - OCR processing for scanned PDFs
-- Public API access to stored cleaned text or detected section records
+- Public API access to stored cleaned text records
+- Public API access to raw chunk records
 - Perfect section detection for unusual headings or damaged PDF extraction output
 - Public chunk API responses
 - LLM providers
@@ -198,6 +211,7 @@ Planned placeholders:
 - Streamlit foundation screen
 - Project list workflow
 - PDF upload workflow
+- Document overview workflow
 
 ## Documentation
 

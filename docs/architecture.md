@@ -53,13 +53,15 @@ The section detector is intentionally explainable rather than intelligent. It de
 
 Chunking starts in `backend/app/services/chunking.py`. It splits cleaned text or detected section text into local `TextChunk` objects with `chunk_index`, `section_name`, approximate `page_start` and `page_end`, text, and word count. Chunk settings are validated so standard processing uses 500-800 word chunks with 100-150 word overlap. The service can replace stored chunks for a document transactionally by deleting stale chunks and inserting the new chunk set in one database commit. It does not call AI providers.
 
+Document overview starts in `backend/app/services/document_overview.py`. It reads existing document metadata, internal chunk records, section detection analysis, extraction errors, and cleaning warnings to return a local overview with filename, status, page count, word count, chunk count, detected sections, extraction warnings, and a structured processing summary. The summary includes a user-facing message, completion flag, attention flag, and suggested next step. The public overview route exposes this service at `/api/documents/{document_id}/overview` without exposing internal file paths or calling AI providers.
+
 ## Project API
 
 Project routes live in `backend/app/api/routes_projects.py` and are mounted under `/api/projects`. They remain thin FastAPI handlers over the project service layer.
 
 ## Document API
 
-Document upload routes live in `backend/app/api/routes_documents.py` and are mounted under `/api/projects/{project_id}/documents`. The upload route validates project existence, PDF extension, provided content type, and configured file size before calling document services.
+Document routes live in `backend/app/api/routes_documents.py`. Project-scoped document routes are mounted under `/api/projects/{project_id}/documents`; the upload route validates project existence, PDF extension, provided content type, and configured file size before calling document services. The document overview route is mounted at `/api/documents/{document_id}/overview`.
 
 ## Document Storage Boundary
 
