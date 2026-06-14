@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -56,3 +57,13 @@ class DocumentOverviewResponse(BaseModel):
     detected_sections: list[SectionOverviewResponse]
     extraction_warnings: list[str]
     processing_summary: ProcessingSummaryResponse
+
+
+class DocumentLocalAnalysisResponse(BaseModel):
+    id: int
+    document_id: int
+    analysis_type: str
+    title: str | None = None
+    provider_mode: str
+    output_json: dict[str, Any]
+    created_at: datetime

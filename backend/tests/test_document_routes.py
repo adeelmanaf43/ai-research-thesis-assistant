@@ -120,6 +120,85 @@ def _create_document_metadata(
     return document_id
 
 
+def _create_analysis_ready_document(settings: Settings) -> int:
+    database_engine = create_database_engine(settings)
+    session_factory = get_session_factory(database_engine)
+    with session_factory() as session:
+        project = create_project(session, ProjectCreate(name="Analysis project"))
+        cleaned_text_path = settings.upload_dir / "analysis-ready.cleaned.txt"
+        cleaned_text_path.parent.mkdir(parents=True, exist_ok=True)
+        cleaned_text_path.write_text(
+            "Introduction\n"
+            "Retrieval retrieval supports local analysis.\n\n"
+            "References\n"
+            "[1] Smith, J. Local retrieval.",
+            encoding="utf-8",
+        )
+        document = create_document_record(
+            session,
+            DocumentCreate(
+                project_id=project.id,
+                original_filename="analysis-ready.pdf",
+                mime_type="application/pdf",
+                file_size_bytes=256,
+            ),
+            stored_filename="analysis-ready.pdf",
+            file_path=settings.upload_dir / "analysis-ready.pdf",
+            status="processed",
+        )
+        document.cleaned_text_path = str(cleaned_text_path)
+        session.add(document)
+        session.flush()
+        session.add_all(
+            [
+                Analysis(
+                    project_id=project.id,
+                    document_id=document.id,
+                    analysis_type="section_detection",
+                    title="Detected sections",
+                    content=json.dumps(
+                        [
+                            {
+                                "section_type": "introduction",
+                                "section_name": "Introduction",
+                                "text": "Retrieval retrieval supports local analysis.",
+                            },
+                            {
+                                "section_type": "references",
+                                "section_name": "References",
+                                "text": "[1] Smith, J. Local retrieval.",
+                            },
+                        ]
+                    ),
+                    provider_mode="local",
+                ),
+                Chunk(
+                    document_id=document.id,
+                    chunk_index=0,
+                    section_name="Introduction",
+                    text="Retrieval retrieval supports local analysis.",
+                    word_count=5,
+                    page_start=1,
+                    page_end=1,
+                ),
+                Chunk(
+                    document_id=document.id,
+                    chunk_index=1,
+                    section_name="References",
+                    text="[1] Smith, J. Local retrieval.",
+                    word_count=4,
+                    page_start=1,
+                    page_end=1,
+                ),
+            ]
+        )
+        session.commit()
+        document_id = document.id
+
+    database_engine.dispose()
+    return document_id
+
+
 def _pdf_bytes(page_text: str) -> bytes:
     document = fitz.open()
     page = document.new_page()
@@ -351,6 +430,100 @@ async def test_get_document_overview_route_returns_user_friendly_invalid_id_erro
 
     assert response.status_code == 422
     assert response.json()["detail"] == "Document ID must be a positive integer."
+
+
+@pytest.mark.anyio
+async def test_create_document_local_overview_analysis_route_persists_analysis(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    document_id = _create_analysis_ready_document(document_api_settings)
+
+    async with document_api_client as client:
+        response = await client.post(f"/api/documents/{document_id}/analysis/local-overview")
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["document_id"] == document_id
+    assert payload["analysis_type"] == "document_overview_local"
+    assert payload["provider_mode"] == "local"
+    assert payload["title"] == "Local document overview analysis"
+    assert payload["output_json"]["document_id"] == document_id
+    assert payload["output_json"]["filename"] == "analysis-ready.pdf"
+    assert payload["output_json"]["keywords"][0]["keyword"] == "retrieval"
+    assert payload["output_json"]["statistics"]["word_count_by_section"] == {
+        "Introduction": 5,
+        "References": 4,
+    }
+    assert payload["output_json"]["statistics"]["chunk_count_by_section"] == {
+        "Introduction": 1,
+        "References": 1,
+    }
+    assert payload["output_json"]["statistics"]["reference_count_estimate"] == 1
+
+
+@pytest.mark.anyio
+async def test_get_document_local_overview_analysis_route_returns_latest_analysis(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    document_id = _create_analysis_ready_document(document_api_settings)
+
+    async with document_api_client as client:
+        created_response = await client.post(
+            f"/api/documents/{document_id}/analysis/local-overview"
+        )
+        fetched_response = await client.get(f"/api/documents/{document_id}/analysis/local-overview")
+
+    assert created_response.status_code == 201
+    assert fetched_response.status_code == 200
+    assert fetched_response.json()["id"] == created_response.json()["id"]
+    assert fetched_response.json()["output_json"]["statistics"]["total_word_count"] == 11
+
+
+@pytest.mark.anyio
+async def test_get_document_local_overview_analysis_route_returns_404_when_missing(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    document_id = _create_analysis_ready_document(document_api_settings)
+
+    async with document_api_client as client:
+        response = await client.get(f"/api/documents/{document_id}/analysis/local-overview")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == (
+        "Local overview analysis not found. Trigger local analysis first."
+    )
+
+
+@pytest.mark.anyio
+async def test_create_document_local_overview_analysis_route_requires_cleaned_text(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    document_id = _create_document_metadata(document_api_settings, status="stored")
+
+    async with document_api_client as client:
+        response = await client.post(f"/api/documents/{document_id}/analysis/local-overview")
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == (
+        "Cleaned text is not available. Upload and process the document first."
+    )
+
+
+@pytest.mark.anyio
+async def test_create_document_local_overview_analysis_route_returns_404_for_missing_document(
+    document_api_client: httpx.AsyncClient,
+) -> None:
+    async with document_api_client as client:
+        response = await client.post("/api/documents/999/analysis/local-overview")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == (
+        "Document not found. Upload a document or use an existing document ID."
+    )
 
 
 @pytest.mark.anyio

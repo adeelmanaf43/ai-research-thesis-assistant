@@ -11,6 +11,31 @@ WORD_PATTERN = re.compile(r"\b\w+\b")
 EMPTY_INPUT_WARNING = "Input text is empty."
 EMPTY_CLEANED_TEXT_WARNING = "Cleaned text is empty after removing extraction noise."
 LARGE_TEXT_REDUCTION_WARNING = "Cleaning removed more than half of the original characters."
+ACADEMIC_HEADINGS = {
+    "abstract",
+    "summary",
+    "introduction",
+    "background",
+    "literature review",
+    "review of literature",
+    "related work",
+    "previous studies",
+    "methodology",
+    "methods",
+    "method",
+    "materials and methods",
+    "research methodology",
+    "results",
+    "findings",
+    "discussion",
+    "analysis",
+    "conclusion",
+    "conclusions",
+    "concluding remarks",
+    "references",
+    "bibliography",
+    "works cited",
+}
 
 
 @dataclass(frozen=True)
@@ -60,8 +85,17 @@ def _is_bullet_or_list_item(line: str) -> bool:
     return bool(re.match(r"^(\d+[\.)]|[A-Za-z][\.)]|[-*\u2022])\s+", line))
 
 
+def _is_academic_heading_line(line: str) -> bool:
+    normalized = re.sub(r"^\d+(?:\.\d+)*[\.)]?\s+", "", line.strip().lower())
+    normalized = re.sub(r"[^a-z0-9 &/-]+", "", normalized)
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+    return normalized in ACADEMIC_HEADINGS
+
+
 def _should_join_lines(current_line: str, next_line: str) -> bool:
     if not current_line or not next_line:
+        return False
+    if _is_academic_heading_line(current_line) or _is_academic_heading_line(next_line):
         return False
     if _is_bullet_or_list_item(current_line) or _is_bullet_or_list_item(next_line):
         return False

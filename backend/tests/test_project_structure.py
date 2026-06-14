@@ -24,6 +24,8 @@ def test_hour_one_root_structure_exists() -> None:
         "docs/day4_validation.md",
         "docs/day5_validation.md",
         "docs/week2-day1-validation.md",
+        "docs/week-02-demo.md",
+        "docs/week2-day6-validation.md",
         "docs/api-reference.md",
         "docs/weekly-progress.md",
         "docs/learning-notes.md",
@@ -80,13 +82,13 @@ def test_docs_do_not_hardcode_local_machine_paths() -> None:
         assert "E:/portfolio-projects" not in content
 
 
-def test_readme_reflects_current_document_overview_milestone() -> None:
+def test_readme_reflects_current_local_analysis_milestone() -> None:
     readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
 
-    assert "Week 2, Day 5: Document overview API foundation." in readme
+    assert "Week 3, Day 1: Local keyword extraction and document statistics foundation." in readme
     assert "Project CRUD service layer and FastAPI routes" in readme
     assert "Safe document storage path helpers" in readme
-    assert "Document service placeholders" in readme
+    assert "Document service functions" in readme
     assert "PDF-only document upload API" in readme
     assert "Local PDF text extraction service using PyMuPDF" in readme
     assert "ocr_needed" in readme
@@ -95,8 +97,13 @@ def test_readme_reflects_current_document_overview_milestone() -> None:
     assert "Rule-based section detection service" in readme
     assert "Chunking service foundation" in readme
     assert "Document overview API" in readme
+    assert "Local keyword extraction" in readme
+    assert "Local document statistics" in readme
+    assert 'analysis_type="document_overview_local"' in readme
+    assert "/api/documents/1/analysis/local-overview" in readme
     assert "Ruff linting and Black formatting configuration" in readme
     assert "docs/api-reference.md" in readme
+    assert "docs/week-02-demo.md" in readme
     assert "docs/weekly-progress.md" in readme
     assert "docs/week2-day1-validation.md" in readme
     assert "docs/learning-notes.md" in readme
@@ -347,6 +354,31 @@ def test_document_overview_service_and_docs_are_present() -> None:
     assert "Week 2 Day 5 Update" in weekly_progress
 
 
+def test_architecture_documents_current_processing_pipeline() -> None:
+    architecture = (PROJECT_ROOT / "docs" / "architecture.md").read_text(encoding="utf-8")
+
+    required_pipeline_steps = [
+        "Current Processing Pipeline",
+        "POST /api/projects/{project_id}/documents",
+        "validate project, PDF extension, content type, and file size",
+        "save original PDF under data/uploads/projects/{project_id}/documents/",
+        "create documents row in SQLite",
+        "extract page text, page count, and metadata with PyMuPDF",
+        "clean extracted text with deterministic text_cleaning helpers",
+        "save .extracted.txt and .cleaned.txt artifacts beside the PDF",
+        "detect academic sections with rule-based section_detection",
+        "store section_detection output in analyses table",
+        "split section text into overlapping chunks with chunking service",
+        "replace document chunks transactionally in chunks table",
+        "mark document as processed, ocr_needed, or a clear failure status",
+        "GET /api/documents/{document_id}/overview returns safe processing metadata",
+        "document_overview.py` owns user-facing overview aggregation",
+    ]
+
+    for expected_text in required_pipeline_steps:
+        assert expected_text in architecture
+
+
 def test_week_two_day_one_validation_documents_processing_behavior() -> None:
     validation_doc = (PROJECT_ROOT / "docs" / "week2-day1-validation.md").read_text(
         encoding="utf-8"
@@ -357,3 +389,44 @@ def test_week_two_day_one_validation_documents_processing_behavior() -> None:
     assert "extraction_failed" in validation_doc
     assert "ocr_needed" in validation_doc
     assert "PyMuPDF" in validation_doc
+
+
+def test_week_two_day_six_validation_documents_integration_behavior() -> None:
+    validation_doc = (PROJECT_ROOT / "docs" / "week2-day6-validation.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "Week 2 Day 6 Validation" in validation_doc
+    assert "upload-to-overview integration test" in validation_doc
+    assert "Edge Cases Covered" in validation_doc
+    assert "Duplicate same-name uploads" in validation_doc
+    assert "Long document processing" in validation_doc
+    assert "academic headings such as `Abstract` and `Methodology`" in validation_doc
+    assert "extract text locally with PyMuPDF" in validation_doc
+    assert "/api/documents/1/overview" in validation_doc
+    assert "private local PDFs are not required" in validation_doc
+
+
+def test_week_two_demo_documents_exact_demo_steps() -> None:
+    demo_doc = (PROJECT_ROOT / "docs" / "week-02-demo.md").read_text(encoding="utf-8")
+
+    required_content = [
+        "Week 2 Demo",
+        "What This Demo Proves",
+        "Start Backend",
+        "Check Health",
+        "Create Project",
+        "Upload PDF",
+        "List Project Documents",
+        "Fetch Document Overview",
+        "Open Streamlit Overview",
+        "Run Automated Validation",
+        "Expected result",
+        "status      : processed",
+        "190 passed",
+        "without paid APIs",
+        "data/uploads/",
+    ]
+
+    for expected_text in required_content:
+        assert expected_text in demo_doc

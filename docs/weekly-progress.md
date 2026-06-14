@@ -206,3 +206,45 @@ Still not included:
 
 - Full frontend project creation, upload, and document management workflow
 - Search, Q&A, summaries, comparison, or export
+
+## Week 2 Day 6 Update
+
+Week 2 Day 6 started integration validation for the local document processing pipeline.
+
+Completed:
+
+- Added an automated upload-to-overview integration test.
+- Generated a local text-based PDF in memory for deterministic test input.
+- Validated project creation, PDF upload, extraction, cleaning, section detection, chunk storage, project document listing, and document overview through public API calls.
+- Checked internal SQLite records for processed document metadata, section detection analysis, chunk rows, and saved text artifacts.
+- Added edge-case coverage for duplicate same-name uploads and long-document processing.
+- Fixed heading-aware text cleaning so academic headings are preserved before lowercase section text.
+- Added manual validation steps in `docs/week2-day6-validation.md`.
+
+Still not included:
+
+- OCR processing
+- Search, Q&A, summaries, comparison, or export
+
+## Week 3 Day 1 Update
+
+Week 3 Day 1 started the deterministic local analysis layer.
+
+Completed:
+
+- Added `backend/app/services/local_analysis.py`.
+- Added keyword extraction with stopword filtering, frequencies, deterministic scores, and stable sorting.
+- Added document statistics for total word count, word count by section, chunk count by section, reference count estimate, and basic readability metrics.
+- Added local overview analysis persistence using `analysis_type="document_overview_local"`.
+- Added `POST /api/documents/{document_id}/analysis/local-overview` to generate and store local overview analysis.
+- Added `GET /api/documents/{document_id}/analysis/local-overview` to fetch the latest stored local overview analysis.
+- Added unit and API tests for keyword extraction, statistics, JSON analysis storage, trigger behavior, fetch behavior, missing documents, missing analysis, and unprocessed documents.
+- Updated API reference and README notes for the new local analysis endpoints.
+
+Still not included:
+
+- Extractive summaries
+- TF-IDF search
+- Source-grounded Q&A
+- Ollama or cloud provider generation
+- Report export

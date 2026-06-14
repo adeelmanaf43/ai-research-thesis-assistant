@@ -56,6 +56,22 @@ def test_fix_broken_lines_joins_paragraph_lines_but_preserves_headings() -> None
     assert "1. First item\n2. Second item" in cleaned
 
 
+def test_fix_broken_lines_preserves_heading_before_lowercase_section_text() -> None:
+    text = (
+        "Abstract\n"
+        "abstract0 abstract1 abstract2.\n\n"
+        "Methodology\n"
+        "methodology0 methodology1 methodology2."
+    )
+
+    cleaned = fix_broken_lines(text)
+
+    assert "Abstract\nabstract0 abstract1 abstract2." in cleaned
+    assert "Methodology\nmethodology0 methodology1 methodology2." in cleaned
+    assert "Abstract abstract0" not in cleaned
+    assert "Methodology methodology0" not in cleaned
+
+
 def test_remove_repeated_page_artifacts_removes_safe_repeated_headers_and_numbers() -> None:
     text = (
         "Research Draft\n"

@@ -2,7 +2,7 @@
 
 A local-first document intelligence web app for students, researchers, thesis writers, academic freelancers, and analysts.
 
-The project is designed to keep working without paid APIs, mandatory Ollama, or cloud services. The current foundation includes project management, safe PDF upload, local PDF text extraction, deterministic text cleaning helpers, tests, and documentation.
+The project is designed to keep working without paid APIs, mandatory Ollama, or cloud services. The current foundation includes project management, safe PDF upload, local PDF text extraction, deterministic text cleaning, local keyword/statistics analysis, tests, and documentation.
 
 ## Problem
 
@@ -109,7 +109,7 @@ Run the frontend:
 
 ## Current Features
 
-Week 2, Day 5: Document overview API foundation.
+Week 3, Day 1: Local keyword extraction and document statistics foundation.
 
 Included now:
 
@@ -122,7 +122,7 @@ Included now:
 - Project CRUD service layer and FastAPI routes
 - Isolated API tests for project endpoints using temporary SQLite databases
 - Safe document storage path helpers under `uploads/projects/{project_id}/documents/`
-- Document service placeholders for saving files, creating records, status updates, and project-scoped document fetches
+- Document service functions for saving files, creating records, status updates, and project-scoped document fetches
 - PDF-only document upload API with project existence, extension, content type, and size validation
 - Local PDF text extraction service using PyMuPDF
 - Upload-time processing metadata with page count, word count, `processed`, `extraction_failed`, `ocr_needed`, and processing failure statuses
@@ -134,6 +134,10 @@ Included now:
 - Transactional chunk replacement service that clears stale document chunks before inserting reprocessed chunks
 - Processed document lifecycle documented from upload through chunk persistence
 - Document overview API with filename, status, page count, word count, chunk count, detected sections, warnings, and structured processing summary
+- Local keyword extraction with stopword filtering, deterministic scores, and frequencies
+- Local document statistics with word count by section, chunk count by section, reference count estimate, and basic readability metrics
+- Local overview analysis storage using `analysis_type="document_overview_local"`
+- API endpoints to generate and fetch stored local overview analysis
 - Project-scoped document listing endpoint that hides internal storage paths
 - Streamlit document overview panel that loads backend overview data when FastAPI is running
 - Ruff linting and Black formatting configuration
@@ -164,6 +168,13 @@ Example document overview:
 Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/overview"
 ```
 
+Example local overview analysis:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/analysis/local-overview" -Method Post
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/analysis/local-overview"
+```
+
 The Streamlit frontend can load this overview when the backend is running. Use the default backend URL or set `THESIS_ASSISTANT_BACKEND_URL` before launching Streamlit.
 
 ## Roadmap
@@ -172,7 +183,7 @@ Near-term milestones:
 
 - Public chunk API responses
 - Full frontend project and upload workflow
-- Local summaries and keyword extraction
+- Local extractive summaries
 - TF-IDF search
 - Source-grounded Q&A
 - Literature review matrix
@@ -191,6 +202,7 @@ Not included yet:
 - Public API access to raw chunk records
 - Perfect section detection for unusual headings or damaged PDF extraction output
 - Public chunk API responses
+- Full frontend display for local analysis output
 - LLM providers
 - RAG/retrieval
 - Report export
@@ -199,7 +211,7 @@ Not included yet:
 - Docker
 - Cloud AI APIs
 
-The current upload API stores PDF bytes, creates document metadata, attempts local PyMuPDF extraction, runs deterministic text cleaning, saves internal raw/cleaned text artifacts, stores detected sections as local analysis output, and persists internal chunks after successful section detection. Section detection is rule-based and explainable, not a replacement for semantic document understanding. The app does not summarize or analyze document content with AI yet.
+The current upload API stores PDF bytes, creates document metadata, attempts local PyMuPDF extraction, runs deterministic text cleaning, saves internal raw/cleaned text artifacts, stores detected sections as local analysis output, and persists internal chunks after successful section detection. The local overview analysis API can generate and store deterministic keyword/statistics output from processed documents. Section detection, keyword extraction, reference counting, and readability metrics are rule-based and explainable, not replacements for semantic document understanding. The app does not summarize or analyze document content with AI yet.
 
 ## Screenshots
 
@@ -215,4 +227,4 @@ Planned placeholders:
 
 ## Documentation
 
-See [docs/setup.md](docs/setup.md), [docs/architecture.md](docs/architecture.md), [docs/api.md](docs/api.md), [docs/api-reference.md](docs/api-reference.md), [docs/weekly-progress.md](docs/weekly-progress.md), [docs/week2-day1-validation.md](docs/week2-day1-validation.md), [docs/learning-notes.md](docs/learning-notes.md), [docs/day1_validation.md](docs/day1_validation.md), [docs/day2_validation.md](docs/day2_validation.md), [docs/day3_validation.md](docs/day3_validation.md), [docs/day4_validation.md](docs/day4_validation.md), and [docs/day5_validation.md](docs/day5_validation.md) for more detail.
+See [docs/setup.md](docs/setup.md), [docs/architecture.md](docs/architecture.md), [docs/api.md](docs/api.md), [docs/api-reference.md](docs/api-reference.md), [docs/week-02-demo.md](docs/week-02-demo.md), [docs/weekly-progress.md](docs/weekly-progress.md), [docs/week2-day1-validation.md](docs/week2-day1-validation.md), [docs/week2-day6-validation.md](docs/week2-day6-validation.md), [docs/learning-notes.md](docs/learning-notes.md), [docs/day1_validation.md](docs/day1_validation.md), [docs/day2_validation.md](docs/day2_validation.md), [docs/day3_validation.md](docs/day3_validation.md), [docs/day4_validation.md](docs/day4_validation.md), and [docs/day5_validation.md](docs/day5_validation.md) for more detail.

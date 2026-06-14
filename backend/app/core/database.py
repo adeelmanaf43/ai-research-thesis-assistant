@@ -67,11 +67,12 @@ def _ensure_sqlite_schema_compatibility(database_engine: Engine) -> None:
         return
 
     inspector = inspect(database_engine)
-    if "documents" not in inspector.get_table_names():
+    table_names = set(inspector.get_table_names())
+    if "documents" not in table_names:
         return
 
     document_columns = {column["name"] for column in inspector.get_columns("documents")}
-    missing_columns = {
+    missing_document_columns = {
         "extraction_error": "TEXT",
         "extracted_text_path": "TEXT",
         "cleaned_text_path": "TEXT",
@@ -79,8 +80,13 @@ def _ensure_sqlite_schema_compatibility(database_engine: Engine) -> None:
     }
 
     with database_engine.begin() as connection:
-        for column_name, column_type in missing_columns.items():
+        for column_name, column_type in missing_document_columns.items():
             if column_name not in document_columns:
                 connection.execute(
                     text(f"ALTER TABLE documents ADD COLUMN {column_name} {column_type}")
                 )
+
+        if "chunks" in table_names:
+            chunk_columns = {column["name"] for column in inspector.get_columns("chunks")}
+            if "section_name" not in chunk_columns:
+                connection.execute(text("ALTER TABLE chunks ADD COLUMN section_name VARCHAR(120)"))

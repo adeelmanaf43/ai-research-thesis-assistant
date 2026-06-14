@@ -127,3 +127,58 @@ def test_init_database_creates_document_processing_columns(workspace_tmp_path: P
     assert "extracted_text_path" in document_columns
     assert "cleaned_text_path" in document_columns
     assert "cleaning_warnings" in document_columns
+
+
+def test_init_database_adds_chunk_section_name_to_existing_sqlite_database(
+    workspace_tmp_path: Path,
+) -> None:
+    database_path = workspace_tmp_path / "legacy_chunks_schema.db"
+    settings = Settings(
+        app_name="Test App",
+        app_version="0.1.0",
+        environment="test",
+        data_dir=workspace_tmp_path,
+        upload_dir=workspace_tmp_path / "uploads",
+        export_dir=workspace_tmp_path / "exports",
+        database_url=f"sqlite:///{database_path.as_posix()}",
+        provider_mode="local",
+    )
+    database_engine = create_database_engine(settings)
+
+    with database_engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                CREATE TABLE documents (
+                    id INTEGER PRIMARY KEY,
+                    project_id INTEGER NOT NULL,
+                    original_filename VARCHAR(255) NOT NULL,
+                    stored_filename VARCHAR(255) NOT NULL,
+                    file_path TEXT NOT NULL,
+                    status VARCHAR(50) NOT NULL
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                CREATE TABLE chunks (
+                    id INTEGER PRIMARY KEY,
+                    document_id INTEGER NOT NULL,
+                    chunk_index INTEGER NOT NULL,
+                    text TEXT NOT NULL,
+                    word_count INTEGER,
+                    page_start INTEGER,
+                    page_end INTEGER
+                )
+                """
+            )
+        )
+
+    init_database(database_engine)
+    chunk_columns = {column["name"] for column in inspect(database_engine).get_columns("chunks")}
+
+    database_engine.dispose()
+
+    assert "section_name" in chunk_columns

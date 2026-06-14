@@ -268,6 +268,29 @@ Interview explanation:
 
 > I started with rule-based section detection because the MVP must work locally and predictably. It gives useful structure for later chunking while making limitations explicit. A future AI or ML layer can improve classification, but the deterministic baseline is already testable and inspectable.
 
+## Local Keyword Extraction And Statistics
+
+Week 3 starts the local intelligence layer. The keyword extractor uses simple tokenization, stopword filtering, frequency counts, and deterministic scoring. It is intentionally lightweight so the app remains useful without Ollama, cloud providers, or paid API keys.
+
+The document statistics layer adds:
+
+- Word count by detected section
+- Chunk count by section
+- Reference count estimate
+- Basic readability-like metrics
+- Stored local overview analysis under `analysis_type="document_overview_local"`
+
+Why this matters:
+
+- It makes processed PDFs useful before any LLM integration.
+- It gives the future search and Q&A layers document-level signals.
+- It keeps local analysis explainable and testable.
+- It avoids pretending that approximate metrics are perfect semantic understanding.
+
+Interview explanation:
+
+> I added a deterministic local analysis layer before adding AI generation. It extracts keywords and document statistics from cleaned text, stores the result in SQLite, and exposes it through an API. This proves the product can provide useful document intelligence without relying on model availability or paid services.
+
 ## What Was Intentionally Not Built
 
 The current foundation intentionally does not include:
@@ -276,6 +299,7 @@ The current foundation intentionally does not include:
 - RAG or retrieval
 - Local LLM calls
 - Cloud AI APIs
+- AI-generated summaries
 - Authentication
 - Payments
 - Docker
@@ -288,4 +312,4 @@ Interview explanation:
 
 Use this concise explanation:
 
-> I built a local-first AI Research / Thesis Assistant foundation with FastAPI, SQLite, SQLAlchemy, Pydantic schemas, and a service-layer architecture. It supports project CRUD, safe PDF uploads, local PDF extraction, deterministic text cleaning, internal raw/cleaned text artifacts, and isolated tests. I intentionally kept AI providers optional so future summaries, search, and Q&A can build on clean local document processing instead of depending on paid APIs or model availability.
+> I built a local-first AI Research / Thesis Assistant foundation with FastAPI, SQLite, SQLAlchemy, Pydantic schemas, and a service-layer architecture. It supports project CRUD, safe PDF uploads, local PDF extraction, deterministic text cleaning, chunking, document overview, keyword extraction, and local statistics analysis. I intentionally kept AI providers optional so future summaries, search, and Q&A can build on clean local document processing instead of depending on paid APIs or model availability.

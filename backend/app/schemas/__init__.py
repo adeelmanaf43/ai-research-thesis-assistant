@@ -2,6 +2,7 @@
 
 from backend.app.schemas.document import (
     DocumentCreate,
+    DocumentLocalAnalysisResponse,
     DocumentMetadataUpdate,
     DocumentOverviewResponse,
     DocumentResponse,
@@ -19,6 +20,7 @@ from backend.app.schemas.project import (
 
 __all__ = [
     "DocumentCreate",
+    "DocumentLocalAnalysisResponse",
     "DocumentMetadataUpdate",
     "DocumentOverviewResponse",
     "DocumentResponse",

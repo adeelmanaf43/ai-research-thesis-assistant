@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -5,8 +6,10 @@ from sqlalchemy.orm import Session
 
 from backend.app.core.config import Settings, get_settings
 from backend.app.core.database import get_db
+from backend.app.models.analysis import Analysis
 from backend.app.schemas.document import (
     DocumentCreate,
+    DocumentLocalAnalysisResponse,
     DocumentOverviewResponse,
     DocumentResponse,
 )
@@ -22,8 +25,10 @@ from backend.app.services.document_service import (
     DocumentProcessingError,
     DocumentStorageError,
     count_words,
+    create_document_overview_local_analysis_for_document,
     create_document_record,
     create_section_detection_analysis,
+    get_latest_document_overview_local_analysis,
     is_ocr_likely_needed,
     list_documents_by_project,
     save_text_processing_artifacts,
@@ -53,6 +58,26 @@ def _validate_pdf_upload(file: UploadFile) -> None:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Uploaded file content type must be application/pdf.",
         )
+
+
+def _local_analysis_response(analysis: Analysis) -> dict:
+    try:
+        output_json = json.loads(analysis.content)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Stored local overview analysis is not valid JSON.",
+        ) from exc
+
+    return {
+        "id": analysis.id,
+        "document_id": analysis.document_id,
+        "analysis_type": analysis.analysis_type,
+        "title": analysis.title,
+        "provider_mode": analysis.provider_mode,
+        "output_json": output_json,
+        "created_at": analysis.created_at,
+    }
 
 
 @router.get("", response_model=list[DocumentResponse])
@@ -90,6 +115,62 @@ def get_document_overview_route(
         )
 
     return overview.to_dict()
+
+
+@overview_router.get(
+    "/{document_id}/analysis/local-overview",
+    response_model=DocumentLocalAnalysisResponse,
+)
+def get_document_local_overview_analysis_route(
+    document_id: int,
+    db: Session = Depends(get_db),
+) -> dict:
+    try:
+        analysis = get_latest_document_overview_local_analysis(db, document_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+
+    if analysis is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Local overview analysis not found. Trigger local analysis first.",
+        )
+
+    return _local_analysis_response(analysis)
+
+
+@overview_router.post(
+    "/{document_id}/analysis/local-overview",
+    response_model=DocumentLocalAnalysisResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_document_local_overview_analysis_route(
+    document_id: int,
+    db: Session = Depends(get_db),
+) -> dict:
+    try:
+        analysis = create_document_overview_local_analysis_for_document(db, document_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    except DocumentProcessingError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+
+    if analysis is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found. Upload a document or use an existing document ID.",
+        )
+
+    return _local_analysis_response(analysis)
 
 
 @router.post("", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)

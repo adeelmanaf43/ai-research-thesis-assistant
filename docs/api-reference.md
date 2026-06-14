@@ -1,6 +1,6 @@
 # API Reference
 
-This reference documents the current Week 2 API surface for the local-first AI Research / Thesis Assistant. The API works without paid API keys, cloud providers, Docker, authentication, or mandatory Ollama.
+This reference documents the current API surface for the local-first AI Research / Thesis Assistant through Week 3 Day 1. The API works without paid API keys, cloud providers, Docker, authentication, or mandatory Ollama.
 
 Base URL for local development:
 
@@ -10,19 +10,21 @@ http://127.0.0.1:8000
 
 ## Current Endpoints
 
-| Method   | Path                                   | Purpose                                 |
-| -------- | -------------------------------------- | --------------------------------------- |
-| `GET`    | `/`                                    | Basic app readiness metadata            |
-| `GET`    | `/health`                              | Local health check                      |
-| `GET`    | `/api/v1/health`                       | Versioned health check                  |
-| `POST`   | `/api/projects`                        | Create a local research project         |
-| `GET`    | `/api/projects`                        | List local research projects            |
-| `GET`    | `/api/projects/{project_id}`           | Fetch one project by ID                 |
-| `PATCH`  | `/api/projects/{project_id}`           | Update project name or description      |
-| `DELETE` | `/api/projects/{project_id}`           | Delete a project                        |
-| `GET`    | `/api/projects/{project_id}/documents` | List documents in one project           |
-| `POST`   | `/api/projects/{project_id}/documents` | Upload one PDF into an existing project |
-| `GET`    | `/api/documents/{document_id}/overview` | Fetch local document processing overview |
+| Method   | Path                                                  | Purpose                                      |
+| -------- | ----------------------------------------------------- | -------------------------------------------- |
+| `GET`    | `/`                                                   | Basic app readiness metadata                 |
+| `GET`    | `/health`                                             | Local health check                           |
+| `GET`    | `/api/v1/health`                                      | Versioned health check                       |
+| `POST`   | `/api/projects`                                       | Create a local research project              |
+| `GET`    | `/api/projects`                                       | List local research projects                 |
+| `GET`    | `/api/projects/{project_id}`                          | Fetch one project by ID                      |
+| `PATCH`  | `/api/projects/{project_id}`                          | Update project name or description           |
+| `DELETE` | `/api/projects/{project_id}`                          | Delete a project                             |
+| `GET`    | `/api/projects/{project_id}/documents`                | List documents in one project                |
+| `POST`   | `/api/projects/{project_id}/documents`                | Upload one PDF into an existing project      |
+| `GET`    | `/api/documents/{document_id}/overview`               | Fetch local document processing overview     |
+| `POST`   | `/api/documents/{document_id}/analysis/local-overview` | Generate and store local overview analysis   |
+| `GET`    | `/api/documents/{document_id}/analysis/local-overview` | Fetch latest stored local overview analysis  |
 
 ## Health
 
@@ -403,6 +405,87 @@ Response boundary:
 - The original filename is returned for user clarity.
 - Saved files remain under the configured local upload directory.
 
+### `POST /api/documents/{document_id}/analysis/local-overview`
+
+Generates deterministic local overview analysis for a processed document and stores it in the `analyses` table as `analysis_type="document_overview_local"`.
+
+Example request:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/analysis/local-overview" -Method Post
+```
+
+Example response:
+
+```json
+{
+  "id": 3,
+  "document_id": 1,
+  "analysis_type": "document_overview_local",
+  "title": "Local document overview analysis",
+  "provider_mode": "local",
+  "output_json": {
+    "document_id": 1,
+    "filename": "invoice_GAF-175351693.pdf",
+    "keywords": [
+      {
+        "keyword": "retrieval",
+        "score": 0.699537,
+        "frequency": 3
+      }
+    ],
+    "statistics": {
+      "total_word_count": 120,
+      "word_count_by_section": {
+        "Introduction": 40
+      },
+      "chunk_count_by_section": {
+        "Introduction": 1
+      },
+      "reference_count_estimate": 2,
+      "readability": {
+        "sentence_count": 8,
+        "average_words_per_sentence": 15.0,
+        "average_syllables_per_word": 1.7,
+        "flesch_reading_ease": 47.76
+      }
+    }
+  },
+  "created_at": "2026-06-14T10:00:00"
+}
+```
+
+Expected status:
+
+- `201 Created` when analysis is generated and stored.
+- `404 Not Found` when the document does not exist.
+- `409 Conflict` when cleaned text is not available yet.
+- `422 Unprocessable Entity` when the document ID is not a positive integer.
+
+### `GET /api/documents/{document_id}/analysis/local-overview`
+
+Fetches the latest stored local overview analysis for one document. This endpoint does not regenerate analysis.
+
+Example request:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/analysis/local-overview"
+```
+
+Expected status:
+
+- `200 OK` when stored local overview analysis exists.
+- `404 Not Found` when no stored local overview analysis exists.
+- `422 Unprocessable Entity` when the document ID is not a positive integer.
+
+Local overview analysis behavior:
+
+- Uses cleaned text from the local processing pipeline.
+- Extracts top keywords locally with stopword filtering and deterministic scoring.
+- Computes word counts by section, chunk counts by section, reference count estimate, and basic readability metrics.
+- Stores output JSON in SQLite under `analysis_type="document_overview_local"`.
+- Does not call Ollama, cloud providers, or paid APIs.
+
 ## Known Limitations
 
 - No OCR processing for scanned PDFs yet.
@@ -411,12 +494,12 @@ Response boundary:
 - Section detection is rule-based and depends on extracted heading text. It can miss non-standard academic structures, merge unsupported sections into the nearest known section, or infer a weak title from the first non-empty line.
 - Section confidence values are explainable heuristic scores, not statistical model confidence.
 - Chunks are stored internally; only aggregate `chunk_count` is exposed through the overview response.
-- No search, retrieval, RAG, Q&A, summaries, comparison, or export yet.
+- Local keyword/statistics analysis exists, but no search, retrieval, RAG, Q&A, summaries, comparison, or export yet.
 - No auth or permissions layer yet.
 - No Ollama or cloud provider calls yet.
 - Upload validation checks extension, provided content type, and configured file size before local extraction.
 
-These limitations are intentional for Week 2. The current API establishes a stable local-first extraction foundation before document intelligence features are added.
+These limitations are intentional for the current milestone. The API establishes a stable local-first processing and analysis foundation before search, Q&A, provider integrations, and export workflows are added.
 
 ## Manual Smoke Test
 

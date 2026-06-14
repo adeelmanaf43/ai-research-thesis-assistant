@@ -19,6 +19,44 @@ Project creation, file upload, text extraction, cleaning, section detection, chu
 
 Ollama and cloud providers are optional layers behind provider abstractions. They must never be required for the core app to work.
 
+## Current Processing Pipeline
+
+Week 2 now validates the local upload-to-overview pipeline. The pipeline is intentionally deterministic and keeps every required step inside local services before any optional AI layer is introduced.
+
+```text
+POST /api/projects/{project_id}/documents
+  -> validate project, PDF extension, content type, and file size
+  -> save original PDF under data/uploads/projects/{project_id}/documents/
+  -> create documents row in SQLite
+  -> extract page text, page count, and metadata with PyMuPDF
+  -> clean extracted text with deterministic text_cleaning helpers
+  -> save .extracted.txt and .cleaned.txt artifacts beside the PDF
+  -> detect academic sections with rule-based section_detection
+  -> store section_detection output in analyses table
+  -> split section text into overlapping chunks with chunking service
+  -> replace document chunks transactionally in chunks table
+  -> mark document as processed, ocr_needed, or a clear failure status
+  -> GET /api/documents/{document_id}/overview returns safe processing metadata
+```
+
+Pipeline ownership:
+
+- `routes_documents.py` orchestrates HTTP validation and calls service functions.
+- `document_storage.py` owns safe local paths.
+- `document_extraction.py` owns PyMuPDF extraction.
+- `text_cleaning.py` owns deterministic cleanup and warnings.
+- `section_detection.py` owns rule-based academic section metadata.
+- `chunking.py` owns chunk generation and transactional chunk replacement.
+- `document_overview.py` owns user-facing overview aggregation.
+
+Failure behavior:
+
+- Invalid uploads fail before storage.
+- Unreadable PDFs keep the upload record and use `extraction_failed`.
+- Very low-text PDFs use `ocr_needed` without requiring OCR.
+- Text artifact, section analysis, and chunk storage failures use explicit failure statuses instead of crashing silently.
+- The overview endpoint exposes safe metadata, warnings, and aggregate counts, not internal file paths or raw chunk text.
+
 ## Configuration Defaults
 
 The backend loads local settings from environment variables and `.env` when available. Relative local paths are resolved from the project root so commands work consistently from the repository. The default provider mode is `local`, and the app creates upload/export directories on startup.
