@@ -1,6 +1,6 @@
 # API Reference
 
-This reference documents the current API surface for the local-first AI Research / Thesis Assistant through Week 3 Day 2. The API works without paid API keys, cloud providers, Docker, authentication, or mandatory Ollama.
+This reference documents the current API surface for the local-first AI Research / Thesis Assistant through Week 3 Day 3. The API works without paid API keys, cloud providers, Docker, authentication, or mandatory Ollama.
 
 Base URL for local development:
 
@@ -27,6 +27,7 @@ http://127.0.0.1:8000
 | `GET`    | `/api/documents/{document_id}/analysis/local-overview` | Fetch latest stored local overview analysis  |
 | `GET`    | `/api/documents/{document_id}/summaries/sections`     | Fetch local extractive summaries by section  |
 | `POST`   | `/api/documents/{document_id}/analysis/section-summaries` | Generate and store local section summaries |
+| `POST`   | `/api/analysis/{document_id}/research-info`           | Generate and store local research info extraction |
 
 ## Health
 
@@ -592,6 +593,64 @@ Persistence behavior:
 - Stores `provider_mode="local"` because no LLM provider is called.
 - Can store an empty summaries list with limitations when a document exists but has no stored section detection output.
 
+### `POST /api/analysis/{document_id}/research-info`
+
+Generates local rule-based research information extraction and stores the output JSON in SQLite under `analysis_type="research_info_local"` with `provider_mode="local"`.
+
+Example request:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/analysis/1/research-info" -Method Post
+```
+
+Example response:
+
+```json
+{
+  "id": 5,
+  "document_id": 1,
+  "analysis_type": "research_info_local",
+  "title": "Local research information extraction",
+  "provider_mode": "local",
+  "output_json": {
+    "document_id": 1,
+    "filename": "paper.pdf",
+    "fields": {
+      "research_problem": {
+        "field": "research_problem",
+        "extracted_text": "The problem is that thesis writers lack source-grounded review tools.",
+        "source_section": "Introduction",
+        "confidence": 0.7
+      },
+      "findings": {
+        "field": "findings",
+        "extracted_text": null,
+        "source_section": null,
+        "confidence": 0.0
+      }
+    },
+    "warnings": []
+  },
+  "created_at": "2026-06-14T10:00:00"
+}
+```
+
+Expected status:
+
+- `201 Created` when research information is generated and stored.
+- `404 Not Found` when the document does not exist.
+- `409 Conflict` when cleaned text is not available yet.
+- `422 Unprocessable Entity` when the document ID is not a positive integer.
+
+Research information behavior:
+
+- Extracts research problem, objectives, research questions, methodology, dataset/sample, variables, findings, limitations, and future work using local rules.
+- Returns honest `null` text/source and `0.0` confidence for fields that are not found.
+- Uses cleaned text and stored section detection output when available.
+- Does not call Ollama, cloud providers, or paid APIs.
+- Works best when the PDF contains clear academic phrasing such as "objective", "research question", "methodology", "sample", "findings", "limitation", or "future work".
+- Does not perform semantic inference. Implied goals, unusual section wording, damaged PDF text, or OCR-only documents may produce missing fields or lower-confidence results.
+
 ## Known Limitations
 
 - No OCR processing for scanned PDFs yet.
@@ -600,7 +659,7 @@ Persistence behavior:
 - Section detection is rule-based and depends on extracted heading text. It can miss non-standard academic structures, merge unsupported sections into the nearest known section, or infer a weak title from the first non-empty line.
 - Section confidence values are explainable heuristic scores, not statistical model confidence.
 - Chunks are stored internally; only aggregate `chunk_count` is exposed through the overview response.
-- Local keyword/statistics analysis and persisted extractive section summaries exist, but no search, retrieval, RAG, Q&A, generative summaries, comparison, or export yet.
+- Local keyword/statistics analysis, persisted extractive section summaries, and persisted research information extraction exist, but no search, retrieval, RAG, Q&A, generative summaries, comparison, or export yet.
 - No auth or permissions layer yet.
 - No Ollama or cloud provider calls yet.
 - Upload validation checks extension, provided content type, and configured file size before local extraction.

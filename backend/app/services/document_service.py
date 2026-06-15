@@ -20,6 +20,7 @@ from backend.app.services.local_analysis import (
     SectionSummary,
     build_document_statistics,
     extract_keywords,
+    extract_research_information,
     summarize_section,
 )
 from backend.app.services.section_detection import DetectedSection
@@ -39,6 +40,7 @@ MIN_EXTRACTED_WORDS_FOR_TEXT = 10
 OCR_NEEDED_MESSAGE = "Very little extractable text was found. This PDF may be scanned or need OCR."
 DOCUMENT_OVERVIEW_LOCAL_ANALYSIS_TYPE = "document_overview_local"
 DOCUMENT_SECTION_SUMMARIES_LOCAL_ANALYSIS_TYPE = "section_summaries_local"
+DOCUMENT_RESEARCH_INFO_LOCAL_ANALYSIS_TYPE = "research_info_local"
 
 
 @dataclass(frozen=True)
@@ -264,6 +266,63 @@ def create_document_section_summaries_local_analysis(
     except SQLAlchemyError as exc:
         db.rollback()
         raise DocumentProcessingError("Could not save local section summaries.") from exc
+
+    return analysis
+
+
+def create_document_research_info_local_analysis(
+    db: Session,
+    document_id: int,
+) -> Analysis | None:
+    if document_id <= 0:
+        raise ValueError("Document ID must be a positive integer.")
+
+    document = db.get(Document, document_id)
+    if document is None:
+        return None
+    if not document.cleaned_text_path:
+        raise DocumentProcessingError(
+            "Cleaned text is not available. Upload and process the document first."
+        )
+
+    cleaned_text_path = Path(document.cleaned_text_path)
+    try:
+        cleaned_text = cleaned_text_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise DocumentProcessingError("Could not read cleaned document text.") from exc
+
+    sections = _load_stored_sections(_latest_section_detection_analysis(db, document.id))
+    research_information = extract_research_information(
+        cleaned_text,
+        sections=sections,
+    )
+    output_json = {
+        "document_id": document.id,
+        "filename": document.original_filename,
+        **research_information.to_dict(),
+    }
+
+    try:
+        content = json.dumps(output_json, ensure_ascii=True, indent=2, sort_keys=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Research information output must be JSON serializable.") from exc
+
+    analysis = Analysis(
+        project_id=document.project_id,
+        document_id=document.id,
+        analysis_type=DOCUMENT_RESEARCH_INFO_LOCAL_ANALYSIS_TYPE,
+        title="Local research information extraction",
+        content=content,
+        provider_mode="local",
+    )
+
+    try:
+        db.add(analysis)
+        db.commit()
+        db.refresh(analysis)
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise DocumentProcessingError("Could not save local research information.") from exc
 
     return analysis
 

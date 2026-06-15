@@ -93,6 +93,10 @@ Chunking starts in `backend/app/services/chunking.py`. It splits cleaned text or
 
 Document overview starts in `backend/app/services/document_overview.py`. It reads existing document metadata, internal chunk records, section detection analysis, extraction errors, and cleaning warnings to return a local overview with filename, status, page count, word count, chunk count, detected sections, extraction warnings, and a structured processing summary. The summary includes a user-facing message, completion flag, attention flag, and suggested next step. The public overview route exposes this service at `/api/documents/{document_id}/overview` without exposing internal file paths or calling AI providers.
 
+Local research information extraction starts in `backend/app/services/local_analysis.py` and is stored through `backend/app/services/document_service.py`. The route `POST /api/analysis/{document_id}/research-info` reads cleaned text, uses stored section detection output when available, extracts common academic fields with deterministic rules, and stores the payload in the `analyses` table with `analysis_type="research_info_local"` and `provider_mode="local"`.
+
+This extraction layer is intentionally reliable rather than magical. It handles recognizable academic signals such as objectives, research questions, methods, samples, variables, findings, limitations, and future work. It also returns `null` values and `0.0` confidence for fields it cannot find. It does not infer hidden meaning, rewrite the paper, or call an LLM. That makes the behavior safe, explainable, and useful as a fallback before future retrieval or optional AI layers are added.
+
 ## Project API
 
 Project routes live in `backend/app/api/routes_projects.py` and are mounted under `/api/projects`. They remain thin FastAPI handlers over the project service layer.

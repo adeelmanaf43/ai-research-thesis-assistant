@@ -190,6 +190,14 @@ Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/analys
 
 Expected response status: `200 OK` for fetch and `201 Created` for save when document `1` exists.
 
+Generate local research information extraction:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/analysis/1/research-info" -Method Post
+```
+
+Expected response status: `201 Created` when document `1` exists and cleaned text is available.
+
 Upload validation:
 
 - The project must exist.
@@ -202,6 +210,10 @@ This endpoint stores the PDF file locally, creates a document metadata row, and 
 The overview endpoint returns filename, status, page count, word count, chunk count, detected section names/headings, warnings, and a structured processing summary with a user-facing message, completion flag, attention flag, and suggested next step. It does not expose internal file paths, raw cleaned text, raw chunk text, or full section text.
 
 The section summaries endpoint returns local extractive summaries for supported academic sections from stored section detection output. The section summaries analysis endpoint stores the same summary payload in the `analyses` table with `analysis_type="section_summaries_local"` and `provider_mode="local"`. It includes source section names, source sentence indexes, confidence, and limitations, and it does not call Ollama, cloud providers, or paid APIs.
+
+The research information endpoint extracts research problem, objectives, research questions, methodology, dataset/sample, variables, findings, limitations, and future work from cleaned text and stored section detection output. It stores the payload in the `analyses` table with `analysis_type="research_info_local"` and `provider_mode="local"`, using `null` values and `0.0` confidence when a field is not found.
+
+This local extraction is reliable for recognizable academic patterns, but it is not semantic inference. It works best when papers use explicit wording such as "objective", "research question", "methodology", "sample", "findings", "limitation", or "future work". Unusual prose, damaged PDF extraction, or OCR-only documents may leave fields empty.
 
 Document processing lifecycle:
 

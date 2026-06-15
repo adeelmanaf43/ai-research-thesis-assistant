@@ -22,6 +22,136 @@ SUMMARY_SECTION_TYPES = {
 }
 DEFAULT_SUMMARY_SENTENCE_LIMIT = 2
 DEFAULT_SUMMARY_WORD_LIMIT = 90
+RESEARCH_INFORMATION_FIELDS = (
+    "research_problem",
+    "objectives",
+    "research_questions",
+    "methodology",
+    "dataset_sample",
+    "variables",
+    "findings",
+    "limitations",
+    "future_work",
+)
+RESEARCH_INFORMATION_RULES = {
+    "research_problem": {
+        "sections": {"abstract", "introduction", "unknown"},
+        "keywords": (
+            "problem",
+            "challenge",
+            "gap",
+            "lack",
+            "limited",
+            "difficulty",
+            "need",
+            "issue",
+        ),
+    },
+    "objectives": {
+        "sections": {"abstract", "introduction", "methodology"},
+        "keywords": (
+            "objective",
+            "objectives",
+            "aim",
+            "aims",
+            "purpose",
+            "goal",
+            "seeks",
+            "intends",
+        ),
+    },
+    "research_questions": {
+        "sections": {"abstract", "introduction", "methodology"},
+        "keywords": (
+            "research question",
+            "rq",
+            "question",
+            "questions",
+            "hypothesis",
+            "hypotheses",
+        ),
+    },
+    "methodology": {
+        "sections": {"methodology", "methods"},
+        "keywords": (
+            "method",
+            "methodology",
+            "approach",
+            "survey",
+            "interview",
+            "experiment",
+            "regression",
+            "qualitative",
+            "quantitative",
+            "mixed-method",
+        ),
+    },
+    "dataset_sample": {
+        "sections": {"methodology", "methods", "results"},
+        "keywords": (
+            "dataset",
+            "data set",
+            "sample",
+            "participants",
+            "respondents",
+            "observations",
+            "records",
+            "cases",
+        ),
+    },
+    "variables": {
+        "sections": {"methodology", "methods", "results"},
+        "keywords": (
+            "variable",
+            "variables",
+            "dependent variable",
+            "independent variable",
+            "predictor",
+            "outcome",
+            "measure",
+            "measures",
+        ),
+    },
+    "findings": {
+        "sections": {"results", "discussion", "conclusion"},
+        "keywords": (
+            "finding",
+            "findings",
+            "found",
+            "results show",
+            "results indicate",
+            "showed",
+            "revealed",
+            "improved",
+            "increase",
+            "decrease",
+        ),
+    },
+    "limitations": {
+        "sections": {"discussion", "conclusion", "limitations"},
+        "keywords": (
+            "limitation",
+            "limitations",
+            "limited by",
+            "constraint",
+            "constraints",
+            "threat",
+            "bias",
+        ),
+    },
+    "future_work": {
+        "sections": {"discussion", "conclusion", "future_work"},
+        "keywords": (
+            "future work",
+            "future research",
+            "future studies",
+            "further research",
+            "should explore",
+            "recommend",
+            "recommendation",
+        ),
+    },
+}
 
 STOPWORDS = {
     "able",
@@ -207,6 +337,81 @@ class SectionSummary:
 
     def to_dict(self) -> dict[str, str | int | list[int]]:
         return asdict(self)
+
+
+@dataclass(frozen=True)
+class ResearchInfoItem:
+    text: str
+    source_section: str
+    confidence: float
+    matched_keywords: list[str]
+
+    def to_dict(self) -> dict[str, str | float | list[str]]:
+        return {
+            "extracted_text": self.text,
+            "source_section": self.source_section,
+            "confidence": self.confidence,
+            "matched_keywords": self.matched_keywords,
+        }
+
+
+@dataclass(frozen=True)
+class ResearchInformationField:
+    field: str
+    extracted_text: str | None
+    source_section: str | None
+    confidence: float
+
+    @classmethod
+    def from_items(
+        cls,
+        field: str,
+        items: list[ResearchInfoItem],
+    ) -> "ResearchInformationField":
+        if not items:
+            return cls(
+                field=field,
+                extracted_text=None,
+                source_section=None,
+                confidence=0.0,
+            )
+        primary_item = items[0]
+        return cls(
+            field=field,
+            extracted_text=primary_item.text,
+            source_section=primary_item.source_section,
+            confidence=primary_item.confidence,
+        )
+
+    def to_dict(self) -> dict[str, str | float | None]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class ResearchInformation:
+    research_problem: list[ResearchInfoItem]
+    objectives: list[ResearchInfoItem]
+    research_questions: list[ResearchInfoItem]
+    methodology: list[ResearchInfoItem]
+    dataset_sample: list[ResearchInfoItem]
+    variables: list[ResearchInfoItem]
+    findings: list[ResearchInfoItem]
+    limitations: list[ResearchInfoItem]
+    future_work: list[ResearchInfoItem]
+    warnings: list[str]
+
+    def to_dict(self) -> dict[str, dict[str, dict[str, str | float | None]] | list[str]]:
+        fields = {
+            field_name: ResearchInformationField.from_items(
+                field_name,
+                getattr(self, field_name),
+            ).to_dict()
+            for field_name in RESEARCH_INFORMATION_FIELDS
+        }
+        return {
+            "fields": fields,
+            "warnings": self.warnings,
+        }
 
 
 def tokenize_keywords(text: str | None, *, min_word_length: int = 3) -> list[str]:
@@ -429,6 +634,160 @@ def summarize_sections(
         if summary is not None:
             summaries.append(summary)
     return summaries
+
+
+def _clean_research_unit(text: str) -> str:
+    cleaned = re.sub(r"^\s*(?:[-*]|\d+[\.)]|[A-Z]{1,4}\d*[:.)])\s*", "", text)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" :-")
+    return cleaned
+
+
+def _research_candidate_units(text: str | None) -> list[str]:
+    if not text:
+        return []
+
+    units: list[str] = []
+    for line in text.splitlines():
+        cleaned_line = _clean_research_unit(line)
+        if count_analysis_words(cleaned_line) == 0:
+            continue
+        line_sentences = _split_sentences(cleaned_line)
+        if len(line_sentences) > 1:
+            units.extend(line_sentences)
+            continue
+        if len(cleaned_line) <= 180 and (
+            ":" in cleaned_line
+            or cleaned_line.endswith("?")
+            or re.match(r"^(?:RQ|H)\d+", line.strip(), re.IGNORECASE)
+        ):
+            units.append(cleaned_line)
+            continue
+        units.extend(line_sentences)
+    return [_clean_research_unit(unit) for unit in units if count_analysis_words(unit) > 0]
+
+
+def _matched_research_keywords(candidate: str, keywords: tuple[str, ...]) -> list[str]:
+    lowered_candidate = candidate.lower()
+    matched_keywords = [
+        keyword
+        for keyword in keywords
+        if re.search(rf"\b{re.escape(keyword)}\b", lowered_candidate)
+    ]
+    if "?" in candidate and "question" in keywords and "question" not in matched_keywords:
+        matched_keywords.append("question")
+    return matched_keywords
+
+
+def _research_candidate_confidence(
+    *,
+    section_type: str,
+    preferred_sections: set[str],
+    matched_keywords: list[str],
+    candidate: str,
+) -> float:
+    confidence = 0.35
+    if section_type in preferred_sections:
+        confidence += 0.25
+    if matched_keywords:
+        confidence += min(len(matched_keywords) * 0.1, 0.3)
+    if ":" in candidate or "?" in candidate:
+        confidence += 0.05
+    return round(min(confidence, 0.95), 2)
+
+
+def _dedupe_key(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", text.lower()).strip()
+
+
+def _source_sections(
+    text: str | None,
+    sections: list[SectionLike] | None,
+) -> list[tuple[str, str, str]]:
+    if sections:
+        return [
+            (
+                section.section_type.strip().lower() or "unknown",
+                section.section_name.strip() or "Unknown",
+                section.text,
+            )
+            for section in sections
+            if section.text and section.text.strip()
+        ]
+    if text and text.strip():
+        return [("unknown", "Full Document", text)]
+    return []
+
+
+def extract_research_information(
+    text: str | None = None,
+    *,
+    sections: list[SectionLike] | None = None,
+    max_items_per_field: int = 3,
+) -> ResearchInformation:
+    if max_items_per_field < 1:
+        raise ValueError("Research information item limit must be a positive integer.")
+
+    field_items: dict[str, list[ResearchInfoItem]] = {
+        field_name: [] for field_name in RESEARCH_INFORMATION_FIELDS
+    }
+    seen_by_field: dict[str, set[str]] = {
+        field_name: set() for field_name in RESEARCH_INFORMATION_FIELDS
+    }
+    warnings: list[str] = []
+    source_sections = _source_sections(text, sections)
+
+    if not source_sections:
+        warnings.append("No text was available for research information extraction.")
+
+    for section_type, section_name, section_text in source_sections:
+        candidates = _research_candidate_units(section_text)
+        for field_name, raw_rule in RESEARCH_INFORMATION_RULES.items():
+            preferred_sections = set(raw_rule["sections"])
+            keywords = tuple(raw_rule["keywords"])
+            for candidate in candidates:
+                matched_keywords = _matched_research_keywords(candidate, keywords)
+                if not matched_keywords and section_type not in preferred_sections:
+                    continue
+                if not matched_keywords and field_name != "methodology":
+                    continue
+
+                dedupe_key = _dedupe_key(candidate)
+                if dedupe_key in seen_by_field[field_name]:
+                    continue
+                seen_by_field[field_name].add(dedupe_key)
+                field_items[field_name].append(
+                    ResearchInfoItem(
+                        text=candidate,
+                        source_section=section_name,
+                        confidence=_research_candidate_confidence(
+                            section_type=section_type,
+                            preferred_sections=preferred_sections,
+                            matched_keywords=matched_keywords,
+                            candidate=candidate,
+                        ),
+                        matched_keywords=matched_keywords,
+                    )
+                )
+
+    for _field_name, items in field_items.items():
+        items.sort(key=lambda item: (-item.confidence, item.source_section, item.text))
+        del items[max_items_per_field:]
+
+    if source_sections and not any(field_items.values()):
+        warnings.append("No research information patterns were detected with local rules.")
+
+    return ResearchInformation(
+        research_problem=field_items["research_problem"],
+        objectives=field_items["objectives"],
+        research_questions=field_items["research_questions"],
+        methodology=field_items["methodology"],
+        dataset_sample=field_items["dataset_sample"],
+        variables=field_items["variables"],
+        findings=field_items["findings"],
+        limitations=field_items["limitations"],
+        future_work=field_items["future_work"],
+        warnings=warnings,
+    )
 
 
 def _estimate_syllables(word: str) -> int:

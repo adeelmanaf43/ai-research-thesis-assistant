@@ -28,6 +28,7 @@ from backend.app.services.document_service import (
     count_words,
     create_document_overview_local_analysis_for_document,
     create_document_record,
+    create_document_research_info_local_analysis,
     create_document_section_summaries_local_analysis,
     create_section_detection_analysis,
     get_document_section_summaries,
@@ -46,6 +47,7 @@ PDF_CONTENT_TYPES = {"application/pdf", "application/x-pdf"}
 
 router = APIRouter(prefix="/api/projects/{project_id}/documents", tags=["documents"])
 overview_router = APIRouter(prefix="/api/documents", tags=["documents"])
+analysis_router = APIRouter(prefix="/api/analysis", tags=["analysis"])
 
 
 def _validate_pdf_upload(file: UploadFile) -> None:
@@ -212,6 +214,37 @@ def create_document_local_overview_analysis_route(
 ) -> dict:
     try:
         analysis = create_document_overview_local_analysis_for_document(db, document_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    except DocumentProcessingError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+
+    if analysis is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found. Upload a document or use an existing document ID.",
+        )
+
+    return _local_analysis_response(analysis)
+
+
+@analysis_router.post(
+    "/{document_id}/research-info",
+    response_model=DocumentLocalAnalysisResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_document_research_info_analysis_route(
+    document_id: int,
+    db: Session = Depends(get_db),
+) -> dict:
+    try:
+        analysis = create_document_research_info_local_analysis(db, document_id)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,

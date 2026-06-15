@@ -5,6 +5,9 @@ from backend.app.services.local_analysis import (
     DocumentStatistics,
     KeywordScore,
     ReadabilityMetrics,
+    ResearchInfoItem,
+    ResearchInformation,
+    ResearchInformationField,
     SectionSummary,
     build_document_statistics,
     calculate_readability_metrics,
@@ -13,6 +16,7 @@ from backend.app.services.local_analysis import (
     count_words_by_section,
     estimate_reference_count,
     extract_keywords,
+    extract_research_information,
     summarize_section,
     summarize_sections,
     tokenize_keywords,
@@ -387,3 +391,239 @@ def test_summarize_section_rejects_invalid_limits() -> None:
 
     with pytest.raises(ValueError, match="word limit"):
         summarize_section(section, max_words=0)
+
+
+def test_extract_research_information_finds_requested_fields_from_sections() -> None:
+    sections = [
+        _section(
+            "introduction",
+            "Introduction",
+            "The problem is that thesis writers lack source-grounded review tools. "
+            "The objective is to evaluate a local document assistant. "
+            "RQ1: How does local retrieval affect thesis review?",
+        ),
+        _section(
+            "methodology",
+            "Methodology",
+            "The methodology used a mixed-method survey and interview approach. "
+            "The sample included 48 graduate students and 12 academic freelancers. "
+            "Variables included review time, citation accuracy, and confidence.",
+        ),
+        _section(
+            "results",
+            "Results",
+            "The findings revealed that retrieval improved citation accuracy. "
+            "Results show that students completed reviews faster.",
+        ),
+        _section(
+            "discussion",
+            "Discussion",
+            "The limitation is that the sample came from one university. "
+            "Future work should explore larger datasets and more disciplines.",
+        ),
+    ]
+
+    extraction = extract_research_information(sections=sections)
+
+    assert isinstance(extraction, ResearchInformation)
+    assert "lack source-grounded review tools" in extraction.research_problem[0].text
+    assert "evaluate a local document assistant" in extraction.objectives[0].text
+    assert extraction.research_questions[0].text == (
+        "How does local retrieval affect thesis review?"
+    )
+    assert extraction.research_questions[0].source_section == "Introduction"
+    assert "mixed-method survey" in extraction.methodology[0].text
+    assert "48 graduate students" in extraction.dataset_sample[0].text
+    assert "review time" in extraction.variables[0].text
+    assert "retrieval improved citation accuracy" in extraction.findings[0].text
+    assert "one university" in extraction.limitations[0].text
+    assert "larger datasets" in extraction.future_work[0].text
+    assert extraction.warnings == []
+    assert extraction.findings[0].confidence >= 0.7
+    assert "findings" in extraction.findings[0].matched_keywords
+
+    payload = extraction.to_dict()
+    assert set(payload["fields"]) == {
+        "research_problem",
+        "objectives",
+        "research_questions",
+        "methodology",
+        "dataset_sample",
+        "variables",
+        "findings",
+        "limitations",
+        "future_work",
+    }
+    assert payload["fields"]["research_problem"]["field"] == "research_problem"
+    assert (
+        payload["fields"]["research_problem"]["extracted_text"]
+        == extraction.research_problem[0].text
+    )
+    assert payload["fields"]["research_problem"]["source_section"] == "Introduction"
+    assert payload["fields"]["research_problem"]["confidence"] >= 0.7
+    assert payload["warnings"] == []
+
+
+def test_extract_research_information_from_academic_sample_text() -> None:
+    sections = [
+        _section(
+            "abstract",
+            "Abstract",
+            "The objective is to examine whether local document intelligence "
+            "supports thesis writers during literature review. The study also "
+            "measures changes in review speed and citation confidence.",
+        ),
+        _section(
+            "methodology",
+            "Methodology",
+            "A quantitative survey method was used for the study. The sample "
+            "included 120 postgraduate students from three public universities. "
+            "The independent variable was assistant usage, and the dependent "
+            "variable was literature review quality.",
+        ),
+        _section(
+            "results",
+            "Findings",
+            "Results indicate that students using the assistant completed "
+            "reviews faster and improved citation confidence. The findings also "
+            "showed stronger source tracking.",
+        ),
+        _section(
+            "discussion",
+            "Limitations",
+            "The main limitation is that the sample was limited to public "
+            "universities. Future research should explore doctoral students and "
+            "cross-discipline research workflows.",
+        ),
+    ]
+
+    extraction = extract_research_information(sections=sections)
+    fields = extraction.to_dict()["fields"]
+
+    assert "supports thesis writers" in fields["objectives"]["extracted_text"]
+    assert fields["objectives"]["source_section"] == "Abstract"
+    assert "quantitative survey method" in fields["methodology"]["extracted_text"]
+    assert fields["methodology"]["source_section"] == "Methodology"
+    assert "120 postgraduate students" in fields["dataset_sample"]["extracted_text"]
+    assert "independent variable" in fields["variables"]["extracted_text"]
+    assert "completed reviews faster" in fields["findings"]["extracted_text"]
+    assert "sample was limited" in fields["limitations"]["extracted_text"]
+    assert "doctoral students" in fields["future_work"]["extracted_text"]
+    assert all(
+        fields[field_name]["confidence"] > 0
+        for field_name in (
+            "objectives",
+            "methodology",
+            "dataset_sample",
+            "variables",
+            "findings",
+            "limitations",
+        )
+    )
+
+
+def test_extract_research_information_works_with_plain_text() -> None:
+    text = (
+        "This study aims to test local analysis. "
+        "Research question: Can local tools help thesis writers? "
+        "The dataset contains 120 document chunks. "
+        "The dependent variable is answer accuracy."
+    )
+
+    extraction = extract_research_information(text)
+
+    assert extraction.objectives[0].source_section == "Full Document"
+    assert "aims to test local analysis" in extraction.objectives[0].text
+    assert "Can local tools help thesis writers?" in extraction.research_questions[0].text
+    assert "120 document chunks" in extraction.dataset_sample[0].text
+    assert "dependent variable" in extraction.variables[0].text
+
+
+def test_extract_research_information_handles_empty_input_with_warning() -> None:
+    extraction = extract_research_information("")
+
+    assert extraction == ResearchInformation(
+        research_problem=[],
+        objectives=[],
+        research_questions=[],
+        methodology=[],
+        dataset_sample=[],
+        variables=[],
+        findings=[],
+        limitations=[],
+        future_work=[],
+        warnings=["No text was available for research information extraction."],
+    )
+
+
+def test_extract_research_information_warns_when_no_patterns_match() -> None:
+    extraction = extract_research_information("Plain background text without target signals.")
+
+    assert extraction.warnings == [
+        "No research information patterns were detected with local rules."
+    ]
+    fields = extraction.to_dict()["fields"]
+    assert fields["findings"] == {
+        "field": "findings",
+        "extracted_text": None,
+        "source_section": None,
+        "confidence": 0.0,
+    }
+    assert fields["future_work"]["extracted_text"] is None
+
+
+def test_extract_research_information_deduplicates_and_respects_item_limit() -> None:
+    sections = [
+        _section(
+            "results",
+            "Results",
+            "The findings revealed faster reviews. "
+            "The findings revealed faster reviews. "
+            "Results show better citation checks. "
+            "Results indicate stronger source coverage.",
+        )
+    ]
+
+    extraction = extract_research_information(sections=sections, max_items_per_field=2)
+
+    assert len(extraction.findings) == 2
+    assert len({item.text for item in extraction.findings}) == 2
+    assert all(isinstance(item, ResearchInfoItem) for item in extraction.findings)
+
+
+def test_extract_research_information_rejects_invalid_item_limit() -> None:
+    with pytest.raises(ValueError, match="item limit"):
+        extract_research_information("The objective is local analysis.", max_items_per_field=0)
+
+
+def test_research_information_field_uses_unknown_values_when_missing() -> None:
+    field = ResearchInformationField.from_items("limitations", [])
+
+    assert field == ResearchInformationField(
+        field="limitations",
+        extracted_text=None,
+        source_section=None,
+        confidence=0.0,
+    )
+    assert field.to_dict() == {
+        "field": "limitations",
+        "extracted_text": None,
+        "source_section": None,
+        "confidence": 0.0,
+    }
+
+
+def test_research_info_item_serializes_with_extracted_text_key() -> None:
+    item = ResearchInfoItem(
+        text="The objective is to evaluate local extraction.",
+        source_section="Introduction",
+        confidence=0.8,
+        matched_keywords=["objective"],
+    )
+
+    assert item.to_dict() == {
+        "extracted_text": "The objective is to evaluate local extraction.",
+        "source_section": "Introduction",
+        "confidence": 0.8,
+        "matched_keywords": ["objective"],
+    }

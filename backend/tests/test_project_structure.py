@@ -102,8 +102,10 @@ def test_readme_reflects_current_local_analysis_milestone() -> None:
     assert "Local document statistics" in readme
     assert 'analysis_type="document_overview_local"' in readme
     assert 'analysis_type="section_summaries_local"' in readme
+    assert 'analysis_type="research_info_local"' in readme
     assert "/api/documents/1/analysis/local-overview" in readme
     assert "/api/documents/1/analysis/section-summaries" in readme
+    assert "/api/analysis/1/research-info" in readme
     assert "Ruff linting and Black formatting configuration" in readme
     assert "docs/api-reference.md" in readme
     assert "docs/week-02-demo.md" in readme

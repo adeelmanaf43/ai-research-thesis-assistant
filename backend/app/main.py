@@ -29,6 +29,7 @@ def create_app() -> FastAPI:
     app.include_router(projects_router)
     app.include_router(routes_documents.router)
     app.include_router(routes_documents.overview_router)
+    app.include_router(routes_documents.analysis_router)
 
     @app.get("/", tags=["root"])
     def root() -> dict[str, str]:

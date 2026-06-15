@@ -218,6 +218,105 @@ def _create_analysis_ready_document(settings: Settings) -> int:
     return document_id
 
 
+def _create_research_info_ready_document(settings: Settings) -> int:
+    database_engine = create_database_engine(settings)
+    session_factory = get_session_factory(database_engine)
+    with session_factory() as session:
+        project = create_project(session, ProjectCreate(name="Research info project"))
+        cleaned_text_path = settings.upload_dir / "research-info-ready.cleaned.txt"
+        cleaned_text_path.parent.mkdir(parents=True, exist_ok=True)
+        cleaned_text = (
+            "Introduction\n"
+            "The problem is that thesis writers lack source-grounded review tools. "
+            "The objective is to evaluate a local document assistant. "
+            "RQ1: How does local retrieval affect thesis review?\n\n"
+            "Methodology\n"
+            "The methodology used a mixed-method survey and interview approach. "
+            "The sample included 48 graduate students and 12 academic freelancers. "
+            "Variables included review time, citation accuracy, and confidence.\n\n"
+            "Results\n"
+            "The findings revealed that retrieval improved citation accuracy.\n\n"
+            "Discussion\n"
+            "The limitation is that the sample came from one university. "
+            "Future work should explore larger datasets and more disciplines."
+        )
+        cleaned_text_path.write_text(cleaned_text, encoding="utf-8")
+        document = create_document_record(
+            session,
+            DocumentCreate(
+                project_id=project.id,
+                original_filename="research-info-ready.pdf",
+                mime_type="application/pdf",
+                file_size_bytes=256,
+            ),
+            stored_filename="research-info-ready.pdf",
+            file_path=settings.upload_dir / "research-info-ready.pdf",
+            status="processed",
+        )
+        document.cleaned_text_path = str(cleaned_text_path)
+        session.add(document)
+        session.flush()
+        session.add(
+            Analysis(
+                project_id=project.id,
+                document_id=document.id,
+                analysis_type="section_detection",
+                title="Detected sections",
+                content=json.dumps(
+                    [
+                        {
+                            "section_type": "introduction",
+                            "section_name": "Introduction",
+                            "text": (
+                                "The problem is that thesis writers lack "
+                                "source-grounded review tools. "
+                                "The objective is to evaluate a local document assistant. "
+                                "RQ1: How does local retrieval affect thesis review?"
+                            ),
+                            "confidence": 0.95,
+                        },
+                        {
+                            "section_type": "methodology",
+                            "section_name": "Methodology",
+                            "text": (
+                                "The methodology used a mixed-method survey and "
+                                "interview approach. The sample included 48 graduate "
+                                "students and 12 academic freelancers. Variables "
+                                "included review time, citation accuracy, and confidence."
+                            ),
+                            "confidence": 0.95,
+                        },
+                        {
+                            "section_type": "results",
+                            "section_name": "Results",
+                            "text": (
+                                "The findings revealed that retrieval improved "
+                                "citation accuracy."
+                            ),
+                            "confidence": 0.9,
+                        },
+                        {
+                            "section_type": "discussion",
+                            "section_name": "Discussion",
+                            "text": (
+                                "The limitation is that the sample came from one "
+                                "university. Future work should explore larger "
+                                "datasets and more disciplines."
+                            ),
+                            "confidence": 0.9,
+                        },
+                    ]
+                ),
+                provider_mode="local",
+            )
+        )
+        session.commit()
+        document_id = document.id
+
+    database_engine.dispose()
+    return document_id
+
+
 def _pdf_bytes(page_text: str) -> bytes:
     document = fitz.open()
     page = document.new_page()
@@ -677,6 +776,85 @@ async def test_create_document_local_overview_analysis_route_returns_404_for_mis
     assert response.json()["detail"] == (
         "Document not found. Upload a document or use an existing document ID."
     )
+
+
+@pytest.mark.anyio
+async def test_create_research_info_analysis_route_persists_local_analysis(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    document_id = _create_research_info_ready_document(document_api_settings)
+
+    async with document_api_client as client:
+        response = await client.post(f"/api/analysis/{document_id}/research-info")
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["document_id"] == document_id
+    assert payload["analysis_type"] == "research_info_local"
+    assert payload["title"] == "Local research information extraction"
+    assert payload["provider_mode"] == "local"
+    assert payload["output_json"]["document_id"] == document_id
+    assert payload["output_json"]["filename"] == "research-info-ready.pdf"
+    assert "lack source-grounded review tools" in (
+        payload["output_json"]["fields"]["research_problem"]["extracted_text"]
+    )
+    assert payload["output_json"]["fields"]["research_problem"]["source_section"] == (
+        "Introduction"
+    )
+    assert payload["output_json"]["fields"]["research_problem"]["confidence"] > 0
+    assert "larger datasets" in (payload["output_json"]["fields"]["future_work"]["extracted_text"])
+
+    database_engine = create_database_engine(document_api_settings)
+    session_factory = get_session_factory(database_engine)
+    with session_factory() as session:
+        stored_analysis = session.scalar(select(Analysis).where(Analysis.id == payload["id"]))
+        assert stored_analysis is not None
+        assert stored_analysis.analysis_type == "research_info_local"
+        assert stored_analysis.provider_mode == "local"
+        stored_payload = json.loads(stored_analysis.content)
+        assert stored_payload == payload["output_json"]
+    database_engine.dispose()
+
+
+@pytest.mark.anyio
+async def test_create_research_info_analysis_route_requires_cleaned_text(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    document_id = _create_document_metadata(document_api_settings, status="stored")
+
+    async with document_api_client as client:
+        response = await client.post(f"/api/analysis/{document_id}/research-info")
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == (
+        "Cleaned text is not available. Upload and process the document first."
+    )
+
+
+@pytest.mark.anyio
+async def test_create_research_info_analysis_route_returns_404_for_missing_document(
+    document_api_client: httpx.AsyncClient,
+) -> None:
+    async with document_api_client as client:
+        response = await client.post("/api/analysis/999/research-info")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == (
+        "Document not found. Upload a document or use an existing document ID."
+    )
+
+
+@pytest.mark.anyio
+async def test_create_research_info_analysis_route_returns_invalid_id_error(
+    document_api_client: httpx.AsyncClient,
+) -> None:
+    async with document_api_client as client:
+        response = await client.post("/api/analysis/0/research-info")
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Document ID must be a positive integer."
 
 
 @pytest.mark.anyio

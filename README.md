@@ -140,6 +140,7 @@ Included now:
 - API endpoints to generate and fetch stored local overview analysis
 - Local extractive section summaries for abstract, introduction, methodology, results, discussion, and conclusion sections
 - Local section summary analysis storage using `analysis_type="section_summaries_local"` and `provider_mode="local"`
+- Local research information extraction storage using `analysis_type="research_info_local"` and `provider_mode="local"`
 - Project-scoped document listing endpoint that hides internal storage paths
 - Streamlit document overview panel that loads backend overview and section summary data when FastAPI is running
 - Ruff linting and Black formatting configuration
@@ -183,6 +184,14 @@ Example section summaries:
 Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/summaries/sections"
 Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/analysis/section-summaries" -Method Post
 ```
+
+Example research information extraction:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/analysis/1/research-info" -Method Post
+```
+
+Local research information extraction is reliable for clear academic writing patterns, but it is intentionally limited. It can extract common fields such as objectives, methods, samples, findings, limitations, and future work without Ollama or cloud APIs. It does not infer hidden meaning from vague prose, and it returns missing fields honestly as `null` with `0.0` confidence.
 
 The Streamlit frontend can load the document overview and section summaries when the backend is running. Use the default backend URL or set `THESIS_ASSISTANT_BACKEND_URL` before launching Streamlit.
 

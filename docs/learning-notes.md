@@ -291,6 +291,25 @@ Interview explanation:
 
 > I added a deterministic local analysis layer before adding AI generation. It extracts keywords and document statistics from cleaned text, stores the result in SQLite, and exposes it through an API. This proves the product can provide useful document intelligence without relying on model availability or paid services.
 
+## Local Research Information Extraction
+
+The research information extractor uses local rules to find common academic signals such as research problem, objectives, research questions, methodology, dataset or sample, variables, findings, limitations, and future work. It works from cleaned text and stored section detection output when available.
+
+Why this matters:
+
+- It gives students and researchers a fast structured overview without requiring an LLM.
+- It is deterministic, inspectable, and easy to test with known academic sample text.
+- It stores `research_info_local` analysis records with `provider_mode="local"` so the source of the analysis is clear.
+- It returns honest `null` values and `0.0` confidence when a field is not found instead of pretending every document contains every field.
+
+Important limitation:
+
+> Local extraction is reliable for clear academic writing patterns, but it is not semantic understanding. It can miss implied objectives, unusual methodology descriptions, merged PDF text, or findings written without recognizable keywords. These limits are acceptable for the local-first baseline because the behavior is transparent, testable, and safe to improve later with retrieval or optional AI providers.
+
+Interview explanation:
+
+> I built research information extraction locally before adding LLMs. The system can identify useful thesis fields using deterministic rules, store the result in SQLite, and explain confidence and missing fields honestly. This creates a dependable fallback layer that still works when model providers are unavailable.
+
 ## What Was Intentionally Not Built
 
 The current foundation intentionally does not include:

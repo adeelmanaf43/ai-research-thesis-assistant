@@ -9,9 +9,11 @@ from backend.app.schemas.document import DocumentCreate
 from backend.app.schemas.project import ProjectCreate
 from backend.app.services.document_service import (
     MIN_EXTRACTED_WORDS_FOR_TEXT,
+    DocumentProcessingError,
     count_words,
     create_document_overview_local_analysis,
     create_document_record,
+    create_document_research_info_local_analysis,
     create_document_section_summaries_local_analysis,
     create_section_detection_analysis,
     is_ocr_likely_needed,
@@ -258,6 +260,98 @@ def test_create_document_section_summaries_local_analysis_returns_none_for_missi
 
     with session_factory() as session:
         assert create_document_section_summaries_local_analysis(session, 999) is None
+
+    database_engine.dispose()
+
+
+def test_create_document_research_info_local_analysis_persists_output_json(
+    workspace_tmp_path: Path,
+) -> None:
+    session_factory, database_engine, settings = _session_factory(workspace_tmp_path)
+
+    with session_factory() as session:
+        project = create_project(session, ProjectCreate(name="Research info project"))
+        saved_file = save_uploaded_file(settings.upload_dir, project.id, "paper.pdf", b"content")
+        cleaned_text_path = workspace_tmp_path / "paper.cleaned.txt"
+        cleaned_text_path.write_text(
+            "Introduction\n"
+            "The problem is that thesis writers lack source-grounded review tools. "
+            "The objective is to evaluate local document analysis. "
+            "RQ1: How does local retrieval affect thesis review?\n\n"
+            "Methodology\n"
+            "The methodology used a survey with 48 graduate students. "
+            "Variables included review time and citation accuracy.\n\n"
+            "Results\n"
+            "The findings revealed improved citation accuracy.\n\n"
+            "Conclusion\n"
+            "The limitation is that the sample used one university. "
+            "Future work should explore larger datasets.",
+            encoding="utf-8",
+        )
+        document = create_document_record(
+            session,
+            DocumentCreate(project_id=project.id, original_filename="paper.pdf"),
+            saved_file.stored_filename,
+            saved_file.file_path,
+        )
+        document.cleaned_text_path = str(cleaned_text_path)
+        session.add(document)
+        session.flush()
+        create_section_detection_analysis(
+            session,
+            document,
+            detect_sections(cleaned_text_path.read_text(encoding="utf-8")),
+        )
+
+        analysis = create_document_research_info_local_analysis(session, document.id)
+
+        assert analysis is not None
+        payload = json.loads(analysis.content)
+        assert analysis.project_id == project.id
+        assert analysis.document_id == document.id
+        assert analysis.analysis_type == "research_info_local"
+        assert analysis.title == "Local research information extraction"
+        assert analysis.provider_mode == "local"
+        assert payload["document_id"] == document.id
+        assert payload["filename"] == "paper.pdf"
+        assert "lack source-grounded review tools" in (
+            payload["fields"]["research_problem"]["extracted_text"]
+        )
+        assert payload["fields"]["research_problem"]["source_section"] == "Introduction"
+        assert payload["fields"]["research_problem"]["confidence"] > 0
+        assert "larger datasets" in payload["fields"]["future_work"]["extracted_text"]
+
+    database_engine.dispose()
+
+
+def test_create_document_research_info_local_analysis_requires_cleaned_text(
+    workspace_tmp_path: Path,
+) -> None:
+    session_factory, database_engine, settings = _session_factory(workspace_tmp_path)
+
+    with session_factory() as session:
+        project = create_project(session, ProjectCreate(name="Missing text project"))
+        saved_file = save_uploaded_file(settings.upload_dir, project.id, "paper.pdf", b"content")
+        document = create_document_record(
+            session,
+            DocumentCreate(project_id=project.id, original_filename="paper.pdf"),
+            saved_file.stored_filename,
+            saved_file.file_path,
+        )
+
+        with pytest.raises(DocumentProcessingError, match="Cleaned text is not available"):
+            create_document_research_info_local_analysis(session, document.id)
+
+    database_engine.dispose()
+
+
+def test_create_document_research_info_local_analysis_returns_none_for_missing_document(
+    workspace_tmp_path: Path,
+) -> None:
+    session_factory, database_engine, _settings = _session_factory(workspace_tmp_path)
+
+    with session_factory() as session:
+        assert create_document_research_info_local_analysis(session, 999) is None
 
     database_engine.dispose()
 
