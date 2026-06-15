@@ -6,8 +6,10 @@ from backend.app.schemas.document import (
     DocumentMetadataUpdate,
     DocumentOverviewResponse,
     DocumentResponse,
+    DocumentSectionSummariesResponse,
     ProcessingSummaryResponse,
     SectionOverviewResponse,
+    SectionSummaryResponse,
 )
 from backend.app.schemas.health import HealthResponse
 from backend.app.schemas.project import (
@@ -24,6 +26,7 @@ __all__ = [
     "DocumentMetadataUpdate",
     "DocumentOverviewResponse",
     "DocumentResponse",
+    "DocumentSectionSummariesResponse",
     "HealthResponse",
     "ProcessingSummaryResponse",
     "ProjectCreate",
@@ -32,4 +35,5 @@ __all__ = [
     "ProjectResponse",
     "ProjectUpdate",
     "SectionOverviewResponse",
+    "SectionSummaryResponse",
 ]

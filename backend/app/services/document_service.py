@@ -16,7 +16,12 @@ from backend.app.services.document_storage import (
     ensure_project_documents_dir,
     get_document_storage_path,
 )
-from backend.app.services.local_analysis import build_document_statistics, extract_keywords
+from backend.app.services.local_analysis import (
+    SectionSummary,
+    build_document_statistics,
+    extract_keywords,
+    summarize_section,
+)
 from backend.app.services.section_detection import DetectedSection
 from backend.app.services.text_cleaning import TextCleaningResult
 
@@ -33,6 +38,7 @@ WORD_PATTERN = re.compile(r"\b\w+\b")
 MIN_EXTRACTED_WORDS_FOR_TEXT = 10
 OCR_NEEDED_MESSAGE = "Very little extractable text was found. This PDF may be scanned or need OCR."
 DOCUMENT_OVERVIEW_LOCAL_ANALYSIS_TYPE = "document_overview_local"
+DOCUMENT_SECTION_SUMMARIES_LOCAL_ANALYSIS_TYPE = "section_summaries_local"
 
 
 @dataclass(frozen=True)
@@ -54,6 +60,45 @@ class StoredDetectedSection:
     section_type: str
     section_name: str
     text: str
+    confidence: float
+
+
+@dataclass(frozen=True)
+class SectionSummaryResult:
+    section_name: str
+    section_type: str
+    summary: str
+    selected_sentence_count: int
+    source_sentence_indexes: list[int]
+    confidence: float
+    limitations: list[str]
+
+    def to_dict(self) -> dict[str, str | int | float | list[int] | list[str]]:
+        return {
+            "section_name": self.section_name,
+            "section_type": self.section_type,
+            "summary": self.summary,
+            "selected_sentence_count": self.selected_sentence_count,
+            "source_sentence_indexes": self.source_sentence_indexes,
+            "confidence": self.confidence,
+            "limitations": self.limitations,
+        }
+
+
+@dataclass(frozen=True)
+class DocumentSectionSummaries:
+    document_id: int
+    summaries: list[SectionSummaryResult]
+    source_section_names: list[str]
+    limitations: list[str]
+
+    def to_dict(self) -> dict[str, int | list[dict] | list[str]]:
+        return {
+            "document_id": self.document_id,
+            "summaries": [summary.to_dict() for summary in self.summaries],
+            "source_section_names": self.source_section_names,
+            "limitations": self.limitations,
+        }
 
 
 def save_uploaded_file(
@@ -183,6 +228,46 @@ def create_document_overview_local_analysis(
     return analysis
 
 
+def create_document_section_summaries_local_analysis(
+    db: Session,
+    document_id: int,
+) -> Analysis | None:
+    section_summaries = get_document_section_summaries(db, document_id)
+    if section_summaries is None:
+        return None
+
+    document = db.get(Document, document_id)
+    if document is None:
+        return None
+
+    output_json = section_summaries.to_dict()
+    try:
+        content = json.dumps(output_json, ensure_ascii=True, indent=2, sort_keys=True)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "Section summaries local analysis output must be JSON serializable."
+        ) from exc
+
+    analysis = Analysis(
+        project_id=document.project_id,
+        document_id=document.id,
+        analysis_type=DOCUMENT_SECTION_SUMMARIES_LOCAL_ANALYSIS_TYPE,
+        title="Local section summaries",
+        content=content,
+        provider_mode="local",
+    )
+
+    try:
+        db.add(analysis)
+        db.commit()
+        db.refresh(analysis)
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise DocumentProcessingError("Could not save local section summaries.") from exc
+
+    return analysis
+
+
 def get_latest_document_overview_local_analysis(
     db: Session,
     document_id: int,
@@ -229,14 +314,112 @@ def _load_stored_sections(analysis: Analysis | None) -> list[StoredDetectedSecti
     for raw_section in raw_sections:
         if not isinstance(raw_section, dict):
             continue
+        raw_confidence = raw_section.get("confidence", 0.0)
+        try:
+            confidence = float(raw_confidence)
+        except (TypeError, ValueError):
+            confidence = 0.0
+        confidence = max(0.0, min(confidence, 1.0))
         sections.append(
             StoredDetectedSection(
                 section_type=str(raw_section.get("section_type") or "unknown"),
                 section_name=str(raw_section.get("section_name") or "Unknown"),
                 text=str(raw_section.get("text") or ""),
+                confidence=confidence,
             )
         )
     return sections
+
+
+def _summary_confidence(section: StoredDetectedSection, summary: SectionSummary) -> float:
+    if not summary.summary:
+        return 0.0
+    sentence_factor = min(summary.selected_sentence_count / 2, 1.0)
+    return round((section.confidence * 0.75) + (sentence_factor * 0.25), 2)
+
+
+def _summary_limitations(
+    section: StoredDetectedSection,
+    summary: SectionSummary,
+) -> list[str]:
+    limitations = [
+        (
+            "Extractive summary uses original sentences only and does not rewrite "
+            "or infer missing context."
+        )
+    ]
+    if section.confidence < 0.8:
+        limitations.append(
+            "Section confidence is heuristic because section detection is rule-based."
+        )
+    if not summary.summary:
+        limitations.append("No extractable summary sentences were found for this section.")
+    elif summary.selected_sentence_count < 2:
+        limitations.append("Short section produced fewer than two summary sentences.")
+    return limitations
+
+
+def get_document_section_summaries(
+    db: Session,
+    document_id: int,
+) -> DocumentSectionSummaries | None:
+    if document_id <= 0:
+        raise ValueError("Document ID must be a positive integer.")
+
+    document = db.get(Document, document_id)
+    if document is None:
+        return None
+
+    section_analysis = _latest_section_detection_analysis(db, document.id)
+    sections = _load_stored_sections(section_analysis)
+    if not sections:
+        return DocumentSectionSummaries(
+            document_id=document.id,
+            summaries=[],
+            source_section_names=[],
+            limitations=[
+                (
+                    "No stored section detection output was found. "
+                    "Upload and process the document first."
+                )
+            ],
+        )
+
+    summaries: list[SectionSummaryResult] = []
+    source_section_names: list[str] = []
+    for section in sections:
+        summary = summarize_section(section)
+        if summary is None:
+            continue
+
+        source_section_names.append(section.section_name)
+        summaries.append(
+            SectionSummaryResult(
+                section_name=summary.section_name,
+                section_type=summary.section_type,
+                summary=summary.summary,
+                selected_sentence_count=summary.selected_sentence_count,
+                source_sentence_indexes=summary.source_sentence_indexes,
+                confidence=_summary_confidence(section, summary),
+                limitations=_summary_limitations(section, summary),
+            )
+        )
+
+    limitations = [
+        (
+            "Summaries are extractive and local; they select source sentences "
+            "instead of generating new prose."
+        )
+    ]
+    if not summaries:
+        limitations.append("No supported academic sections were available for summarization.")
+
+    return DocumentSectionSummaries(
+        document_id=document.id,
+        summaries=summaries,
+        source_section_names=source_section_names,
+        limitations=limitations,
+    )
 
 
 def _document_chunks(db: Session, document_id: int) -> list[Chunk]:

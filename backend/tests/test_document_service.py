@@ -12,6 +12,7 @@ from backend.app.services.document_service import (
     count_words,
     create_document_overview_local_analysis,
     create_document_record,
+    create_document_section_summaries_local_analysis,
     create_section_detection_analysis,
     is_ocr_likely_needed,
     list_documents_by_project,
@@ -205,6 +206,58 @@ def test_create_document_overview_local_analysis_rejects_non_serializable_output
                 document,
                 {"invalid": {"not", "json"}},
             )
+
+    database_engine.dispose()
+
+
+def test_create_document_section_summaries_local_analysis_persists_output_json(
+    workspace_tmp_path: Path,
+) -> None:
+    session_factory, database_engine, settings = _session_factory(workspace_tmp_path)
+
+    with session_factory() as session:
+        project = create_project(session, ProjectCreate(name="Section summary project"))
+        saved_file = save_uploaded_file(settings.upload_dir, project.id, "paper.pdf", b"content")
+        document = create_document_record(
+            session,
+            DocumentCreate(project_id=project.id, original_filename="paper.pdf"),
+            saved_file.stored_filename,
+            saved_file.file_path,
+        )
+        sections = detect_sections(
+            "Introduction\n"
+            "Retrieval supports local analysis. "
+            "Students use evidence in thesis writing. "
+            "Local summaries preserve source wording.\n\n"
+            "References\n"
+            "[1] Smith, J. Local retrieval."
+        )
+        create_section_detection_analysis(session, document, sections)
+
+        analysis = create_document_section_summaries_local_analysis(session, document.id)
+
+        assert analysis is not None
+        payload = json.loads(analysis.content)
+        assert analysis.project_id == project.id
+        assert analysis.document_id == document.id
+        assert analysis.analysis_type == "section_summaries_local"
+        assert analysis.title == "Local section summaries"
+        assert analysis.provider_mode == "local"
+        assert payload["document_id"] == document.id
+        assert payload["source_section_names"] == ["Introduction"]
+        assert payload["summaries"][0]["section_type"] == "introduction"
+        assert "Retrieval supports local analysis." in payload["summaries"][0]["summary"]
+
+    database_engine.dispose()
+
+
+def test_create_document_section_summaries_local_analysis_returns_none_for_missing_document(
+    workspace_tmp_path: Path,
+) -> None:
+    session_factory, database_engine, _settings = _session_factory(workspace_tmp_path)
+
+    with session_factory() as session:
+        assert create_document_section_summaries_local_analysis(session, 999) is None
 
     database_engine.dispose()
 

@@ -12,6 +12,16 @@ REFERENCE_ENTRY_PATTERN = re.compile(
     re.IGNORECASE,
 )
 VOWEL_GROUP_PATTERN = re.compile(r"[aeiouy]+", re.IGNORECASE)
+SUMMARY_SECTION_TYPES = {
+    "abstract",
+    "introduction",
+    "methodology",
+    "results",
+    "discussion",
+    "conclusion",
+}
+DEFAULT_SUMMARY_SENTENCE_LIMIT = 2
+DEFAULT_SUMMARY_WORD_LIMIT = 90
 
 STOPWORDS = {
     "able",
@@ -187,6 +197,18 @@ class DocumentStatistics:
         return payload
 
 
+@dataclass(frozen=True)
+class SectionSummary:
+    section_type: str
+    section_name: str
+    summary: str
+    selected_sentence_count: int
+    source_sentence_indexes: list[int]
+
+    def to_dict(self) -> dict[str, str | int | list[int]]:
+        return asdict(self)
+
+
 def tokenize_keywords(text: str | None, *, min_word_length: int = 3) -> list[str]:
     if min_word_length < 1:
         raise ValueError("Minimum word length must be a positive integer.")
@@ -311,6 +333,102 @@ def _split_sentences(text: str | None) -> list[str]:
         for sentence in SENTENCE_PATTERN.findall(text)
         if count_analysis_words(sentence) > 0
     ]
+
+
+def _sentence_score(sentence: str, keyword_frequencies: Counter[str], index: int) -> float:
+    tokens = tokenize_keywords(sentence)
+    if not tokens:
+        return 0.0
+
+    frequency_score = sum(keyword_frequencies[token] for token in tokens)
+    length_penalty = max(len(tokens), 1)
+    position_bonus = 0.1 / (index + 1)
+    return round((frequency_score / length_penalty) + position_bonus, 6)
+
+
+def _fit_sentences_to_word_limit(
+    scored_sentences: list[tuple[int, str, float]],
+    max_words: int,
+) -> list[tuple[int, str, float]]:
+    selected: list[tuple[int, str, float]] = []
+    current_word_count = 0
+    for sentence_index, sentence, score in scored_sentences:
+        sentence_word_count = count_analysis_words(sentence)
+        if sentence_word_count > max_words:
+            continue
+        if current_word_count + sentence_word_count > max_words:
+            continue
+        selected.append((sentence_index, sentence, score))
+        current_word_count += sentence_word_count
+    return selected
+
+
+def summarize_section(
+    section: SectionLike,
+    *,
+    max_sentences: int = DEFAULT_SUMMARY_SENTENCE_LIMIT,
+    max_words: int = DEFAULT_SUMMARY_WORD_LIMIT,
+) -> SectionSummary | None:
+    if max_sentences < 1:
+        raise ValueError("Summary sentence limit must be a positive integer.")
+    if max_words < 1:
+        raise ValueError("Summary word limit must be a positive integer.")
+
+    if section.section_type not in SUMMARY_SECTION_TYPES:
+        return None
+
+    sentences = _split_sentences(section.text)
+    if not sentences:
+        return SectionSummary(
+            section_type=section.section_type,
+            section_name=section.section_name,
+            summary="",
+            selected_sentence_count=0,
+            source_sentence_indexes=[],
+        )
+
+    keyword_frequencies = Counter(tokenize_keywords(section.text))
+    if not keyword_frequencies:
+        candidate_sentences = [(index, sentence, 0.0) for index, sentence in enumerate(sentences)]
+    else:
+        candidate_sentences = [
+            (index, sentence, _sentence_score(sentence, keyword_frequencies, index))
+            for index, sentence in enumerate(sentences)
+        ]
+        candidate_sentences.sort(key=lambda item: (-item[2], item[0]))
+
+    selected = _fit_sentences_to_word_limit(candidate_sentences, max_words)[:max_sentences]
+    selected.sort(key=lambda item: item[0])
+    summary_sentences = [sentence for _, sentence, _ in selected]
+
+    return SectionSummary(
+        section_type=section.section_type,
+        section_name=section.section_name,
+        summary=" ".join(summary_sentences).strip(),
+        selected_sentence_count=len(summary_sentences),
+        source_sentence_indexes=[index for index, _, _ in selected],
+    )
+
+
+def summarize_sections(
+    sections: list[SectionLike] | None,
+    *,
+    max_sentences_per_section: int = DEFAULT_SUMMARY_SENTENCE_LIMIT,
+    max_words_per_section: int = DEFAULT_SUMMARY_WORD_LIMIT,
+) -> list[SectionSummary]:
+    if not sections:
+        return []
+
+    summaries: list[SectionSummary] = []
+    for section in sections:
+        summary = summarize_section(
+            section,
+            max_sentences=max_sentences_per_section,
+            max_words=max_words_per_section,
+        )
+        if summary is not None:
+            summaries.append(summary)
+    return summaries
 
 
 def _estimate_syllables(word: str) -> int:

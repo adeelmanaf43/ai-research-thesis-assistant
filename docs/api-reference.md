@@ -1,6 +1,6 @@
 # API Reference
 
-This reference documents the current API surface for the local-first AI Research / Thesis Assistant through Week 3 Day 1. The API works without paid API keys, cloud providers, Docker, authentication, or mandatory Ollama.
+This reference documents the current API surface for the local-first AI Research / Thesis Assistant through Week 3 Day 2. The API works without paid API keys, cloud providers, Docker, authentication, or mandatory Ollama.
 
 Base URL for local development:
 
@@ -25,6 +25,8 @@ http://127.0.0.1:8000
 | `GET`    | `/api/documents/{document_id}/overview`               | Fetch local document processing overview     |
 | `POST`   | `/api/documents/{document_id}/analysis/local-overview` | Generate and store local overview analysis   |
 | `GET`    | `/api/documents/{document_id}/analysis/local-overview` | Fetch latest stored local overview analysis  |
+| `GET`    | `/api/documents/{document_id}/summaries/sections`     | Fetch local extractive summaries by section  |
+| `POST`   | `/api/documents/{document_id}/analysis/section-summaries` | Generate and store local section summaries |
 
 ## Health
 
@@ -486,6 +488,110 @@ Local overview analysis behavior:
 - Stores output JSON in SQLite under `analysis_type="document_overview_local"`.
 - Does not call Ollama, cloud providers, or paid APIs.
 
+### `GET /api/documents/{document_id}/summaries/sections`
+
+Returns concise extractive summaries for supported detected sections. Summaries are built from stored `section_detection` output and select original source sentences instead of generating new prose.
+
+Example request:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/summaries/sections"
+```
+
+Example response:
+
+```json
+{
+  "document_id": 1,
+  "summaries": [
+    {
+      "section_name": "Results",
+      "section_type": "results",
+      "summary": "Retrieval accuracy improved when clean chunks preserved evidence.",
+      "selected_sentence_count": 1,
+      "source_sentence_indexes": [1],
+      "confidence": 0.8,
+      "limitations": [
+        "Extractive summary uses original sentences only and does not rewrite or infer missing context."
+      ]
+    }
+  ],
+  "source_section_names": ["Results"],
+  "limitations": [
+    "Summaries are extractive and local; they select source sentences instead of generating new prose."
+  ]
+}
+```
+
+Expected status:
+
+- `200 OK` when the document exists.
+- `404 Not Found` when the document does not exist.
+- `422 Unprocessable Entity` when the document ID is not a positive integer.
+
+Section summary behavior:
+
+- Supports abstract, introduction, methodology, results, discussion, and conclusion.
+- Skips unsupported sections such as title and references.
+- Returns source section names and source sentence indexes for traceability.
+- Includes confidence and limitations because section detection and sentence scoring are heuristic.
+- Does not call Ollama, cloud providers, or paid APIs.
+
+### `POST /api/documents/{document_id}/analysis/section-summaries`
+
+Generates local extractive section summaries and stores the output JSON in SQLite under `analysis_type="section_summaries_local"` with `provider_mode="local"`.
+
+Example request:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/analysis/section-summaries" -Method Post
+```
+
+Example response:
+
+```json
+{
+  "id": 4,
+  "document_id": 1,
+  "analysis_type": "section_summaries_local",
+  "title": "Local section summaries",
+  "provider_mode": "local",
+  "output_json": {
+    "document_id": 1,
+    "summaries": [
+      {
+        "section_name": "Results",
+        "section_type": "results",
+        "summary": "Retrieval accuracy improved when clean chunks preserved evidence.",
+        "selected_sentence_count": 1,
+        "source_sentence_indexes": [1],
+        "confidence": 0.8,
+        "limitations": [
+          "Extractive summary uses original sentences only and does not rewrite or infer missing context."
+        ]
+      }
+    ],
+    "source_section_names": ["Results"],
+    "limitations": [
+      "Summaries are extractive and local; they select source sentences instead of generating new prose."
+    ]
+  },
+  "created_at": "2026-06-14T10:00:00"
+}
+```
+
+Expected status:
+
+- `201 Created` when summaries are generated and stored.
+- `404 Not Found` when the document does not exist.
+- `422 Unprocessable Entity` when the document ID is not a positive integer.
+
+Persistence behavior:
+
+- Saves the same source-grounded summary payload returned by the section summary endpoint.
+- Stores `provider_mode="local"` because no LLM provider is called.
+- Can store an empty summaries list with limitations when a document exists but has no stored section detection output.
+
 ## Known Limitations
 
 - No OCR processing for scanned PDFs yet.
@@ -494,7 +600,7 @@ Local overview analysis behavior:
 - Section detection is rule-based and depends on extracted heading text. It can miss non-standard academic structures, merge unsupported sections into the nearest known section, or infer a weak title from the first non-empty line.
 - Section confidence values are explainable heuristic scores, not statistical model confidence.
 - Chunks are stored internally; only aggregate `chunk_count` is exposed through the overview response.
-- Local keyword/statistics analysis exists, but no search, retrieval, RAG, Q&A, summaries, comparison, or export yet.
+- Local keyword/statistics analysis and persisted extractive section summaries exist, but no search, retrieval, RAG, Q&A, generative summaries, comparison, or export yet.
 - No auth or permissions layer yet.
 - No Ollama or cloud provider calls yet.
 - Upload validation checks extension, provided content type, and configured file size before local extraction.

@@ -5,6 +5,7 @@ from pathlib import Path
 import fitz
 import httpx
 import pytest
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.app.core.config import Settings, get_settings
@@ -161,12 +162,30 @@ def _create_analysis_ready_document(settings: Settings) -> int:
                             {
                                 "section_type": "introduction",
                                 "section_name": "Introduction",
-                                "text": "Retrieval retrieval supports local analysis.",
+                                "text": (
+                                    "The baseline was simple. "
+                                    "Retrieval retrieval supports local analysis. "
+                                    "Students reported better thesis review "
+                                    "with retrieval evidence."
+                                ),
+                                "confidence": 0.95,
+                            },
+                            {
+                                "section_type": "results",
+                                "section_name": "Results",
+                                "text": (
+                                    "The first result was noisy. "
+                                    "Retrieval accuracy improved when clean chunks "
+                                    "preserved evidence. "
+                                    "Users completed review tasks faster with source evidence."
+                                ),
+                                "confidence": 0.9,
                             },
                             {
                                 "section_type": "references",
                                 "section_name": "References",
                                 "text": "[1] Smith, J. Local retrieval.",
+                                "confidence": 0.95,
                             },
                         ]
                     ),
@@ -452,7 +471,8 @@ async def test_create_document_local_overview_analysis_route_persists_analysis(
     assert payload["output_json"]["filename"] == "analysis-ready.pdf"
     assert payload["output_json"]["keywords"][0]["keyword"] == "retrieval"
     assert payload["output_json"]["statistics"]["word_count_by_section"] == {
-        "Introduction": 5,
+        "Introduction": 17,
+        "Results": 21,
         "References": 4,
     }
     assert payload["output_json"]["statistics"]["chunk_count_by_section"] == {
@@ -479,6 +499,139 @@ async def test_get_document_local_overview_analysis_route_returns_latest_analysi
     assert fetched_response.status_code == 200
     assert fetched_response.json()["id"] == created_response.json()["id"]
     assert fetched_response.json()["output_json"]["statistics"]["total_word_count"] == 11
+
+
+@pytest.mark.anyio
+async def test_get_document_section_summaries_route_returns_supported_section_summaries(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    document_id = _create_analysis_ready_document(document_api_settings)
+
+    async with document_api_client as client:
+        response = await client.get(f"/api/documents/{document_id}/summaries/sections")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["document_id"] == document_id
+    assert payload["source_section_names"] == ["Introduction", "Results"]
+    assert payload["limitations"] == [
+        (
+            "Summaries are extractive and local; they select source sentences "
+            "instead of generating new prose."
+        )
+    ]
+    assert [summary["section_name"] for summary in payload["summaries"]] == [
+        "Introduction",
+        "Results",
+    ]
+    assert payload["summaries"][0]["confidence"] > 0.8
+    assert "Retrieval retrieval supports local analysis." in payload["summaries"][0]["summary"]
+    assert "source_sentence_indexes" in payload["summaries"][0]
+    assert payload["summaries"][0]["limitations"] == [
+        (
+            "Extractive summary uses original sentences only and does not rewrite "
+            "or infer missing context."
+        )
+    ]
+
+
+@pytest.mark.anyio
+async def test_create_document_section_summaries_analysis_route_persists_local_analysis(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    document_id = _create_analysis_ready_document(document_api_settings)
+
+    async with document_api_client as client:
+        response = await client.post(f"/api/documents/{document_id}/analysis/section-summaries")
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["document_id"] == document_id
+    assert payload["analysis_type"] == "section_summaries_local"
+    assert payload["title"] == "Local section summaries"
+    assert payload["provider_mode"] == "local"
+    assert payload["output_json"]["source_section_names"] == ["Introduction", "Results"]
+    assert payload["output_json"]["summaries"][0]["section_type"] == "introduction"
+
+    database_engine = create_database_engine(document_api_settings)
+    session_factory = get_session_factory(database_engine)
+    with session_factory() as session:
+        stored_analysis = session.scalar(select(Analysis).where(Analysis.id == payload["id"]))
+        assert stored_analysis is not None
+        assert stored_analysis.analysis_type == "section_summaries_local"
+        assert stored_analysis.provider_mode == "local"
+        stored_payload = json.loads(stored_analysis.content)
+        assert stored_payload == payload["output_json"]
+    database_engine.dispose()
+
+
+@pytest.mark.anyio
+async def test_create_document_section_summaries_analysis_route_returns_404_for_missing_document(
+    document_api_client: httpx.AsyncClient,
+) -> None:
+    async with document_api_client as client:
+        response = await client.post("/api/documents/999/analysis/section-summaries")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == (
+        "Document not found. Upload a document or use an existing document ID."
+    )
+
+
+@pytest.mark.anyio
+async def test_create_document_section_summaries_analysis_route_returns_invalid_id_error(
+    document_api_client: httpx.AsyncClient,
+) -> None:
+    async with document_api_client as client:
+        response = await client.post("/api/documents/0/analysis/section-summaries")
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Document ID must be a positive integer."
+
+
+@pytest.mark.anyio
+async def test_get_document_section_summaries_route_returns_limitation_without_sections(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    document_id = _create_document_metadata(document_api_settings)
+
+    async with document_api_client as client:
+        response = await client.get(f"/api/documents/{document_id}/summaries/sections")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["summaries"] == []
+    assert payload["source_section_names"] == []
+    assert payload["limitations"] == [
+        "No stored section detection output was found. Upload and process the document first."
+    ]
+
+
+@pytest.mark.anyio
+async def test_get_document_section_summaries_route_returns_404_for_missing_document(
+    document_api_client: httpx.AsyncClient,
+) -> None:
+    async with document_api_client as client:
+        response = await client.get("/api/documents/999/summaries/sections")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == (
+        "Document not found. Upload a document or use an existing document ID."
+    )
+
+
+@pytest.mark.anyio
+async def test_get_document_section_summaries_route_returns_invalid_id_error(
+    document_api_client: httpx.AsyncClient,
+) -> None:
+    async with document_api_client as client:
+        response = await client.get("/api/documents/0/summaries/sections")
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Document ID must be a positive integer."
 
 
 @pytest.mark.anyio

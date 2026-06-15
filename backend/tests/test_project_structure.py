@@ -85,7 +85,7 @@ def test_docs_do_not_hardcode_local_machine_paths() -> None:
 def test_readme_reflects_current_local_analysis_milestone() -> None:
     readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
 
-    assert "Week 3, Day 1: Local keyword extraction and document statistics foundation." in readme
+    assert "Week 3, Day 2: Local extractive section summaries." in readme
     assert "Project CRUD service layer and FastAPI routes" in readme
     assert "Safe document storage path helpers" in readme
     assert "Document service functions" in readme
@@ -98,9 +98,12 @@ def test_readme_reflects_current_local_analysis_milestone() -> None:
     assert "Chunking service foundation" in readme
     assert "Document overview API" in readme
     assert "Local keyword extraction" in readme
+    assert "Local extractive section summaries" in readme
     assert "Local document statistics" in readme
     assert 'analysis_type="document_overview_local"' in readme
+    assert 'analysis_type="section_summaries_local"' in readme
     assert "/api/documents/1/analysis/local-overview" in readme
+    assert "/api/documents/1/analysis/section-summaries" in readme
     assert "Ruff linting and Black formatting configuration" in readme
     assert "docs/api-reference.md" in readme
     assert "docs/week-02-demo.md" in readme

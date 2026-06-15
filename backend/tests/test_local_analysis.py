@@ -5,6 +5,7 @@ from backend.app.services.local_analysis import (
     DocumentStatistics,
     KeywordScore,
     ReadabilityMetrics,
+    SectionSummary,
     build_document_statistics,
     calculate_readability_metrics,
     count_analysis_words,
@@ -12,6 +13,8 @@ from backend.app.services.local_analysis import (
     count_words_by_section,
     estimate_reference_count,
     extract_keywords,
+    summarize_section,
+    summarize_sections,
     tokenize_keywords,
 )
 from backend.app.services.section_detection import DetectedSection
@@ -211,3 +214,176 @@ def test_build_document_statistics_combines_counts_references_and_readability() 
     assert statistics.reference_count_estimate == 1
     assert statistics.readability.sentence_count >= 1
     assert statistics.to_dict()["readability"]["sentence_count"] >= 1
+
+
+def test_summarize_section_selects_high_scoring_sentences_concisely() -> None:
+    section = _section(
+        "results",
+        "Results",
+        "The baseline was simple. "
+        "Retrieval accuracy improved when retrieval chunks used clean evidence. "
+        "Students reported faster thesis review with retrieval evidence. "
+        "A minor formatting issue remained.",
+    )
+
+    summary = summarize_section(section, max_sentences=2, max_words=25)
+
+    assert isinstance(summary, SectionSummary)
+    assert summary.section_type == "results"
+    assert summary.section_name == "Results"
+    assert summary.selected_sentence_count == 2
+    assert "Retrieval accuracy improved" in summary.summary
+    assert "Students reported faster thesis review" in summary.summary
+    assert "A minor formatting issue remained" not in summary.summary
+    assert summary.source_sentence_indexes == [1, 2]
+    assert count_analysis_words(summary.summary) <= 25
+
+
+def test_summarize_section_never_exceeds_word_limit() -> None:
+    section = _section(
+        "discussion",
+        "Discussion",
+        "Retrieval retrieval retrieval retrieval retrieval retrieval retrieval "
+        "retrieval retrieval retrieval retrieval evidence sentence is too long. "
+        "Clean chunks helped students. "
+        "Source evidence improved review.",
+    )
+
+    summary = summarize_section(section, max_sentences=2, max_words=8)
+
+    assert summary is not None
+    assert summary.selected_sentence_count == 2
+    assert "too long" not in summary.summary
+    assert summary.summary == "Clean chunks helped students. Source evidence improved review."
+    assert summary.source_sentence_indexes == [1, 2]
+    assert count_analysis_words(summary.summary) <= 8
+
+
+def test_summarize_section_returns_empty_when_no_sentence_fits_word_limit() -> None:
+    section = _section(
+        "discussion",
+        "Discussion",
+        "Every available discussion sentence is deliberately longer than the limit. "
+        "Another sentence also contains too many words for the configured summary limit.",
+    )
+
+    summary = summarize_section(section, max_sentences=2, max_words=3)
+
+    assert summary == SectionSummary(
+        section_type="discussion",
+        section_name="Discussion",
+        summary="",
+        selected_sentence_count=0,
+        source_sentence_indexes=[],
+    )
+
+
+def test_summarize_section_returns_none_for_unsupported_sections() -> None:
+    section = _section(
+        "references",
+        "References",
+        "Smith, J. Local retrieval. Khan, A. Thesis workflows.",
+    )
+
+    assert summarize_section(section) is None
+
+
+def test_summarize_section_handles_empty_supported_section() -> None:
+    section = _section("abstract", "Abstract", "   ")
+
+    summary = summarize_section(section)
+
+    assert summary == SectionSummary(
+        section_type="abstract",
+        section_name="Abstract",
+        summary="",
+        selected_sentence_count=0,
+        source_sentence_indexes=[],
+    )
+
+
+def test_summarize_section_handles_punctuation_only_supported_section() -> None:
+    section = _section("conclusion", "Conclusion", "!!! ... ???")
+
+    summary = summarize_section(section)
+
+    assert summary == SectionSummary(
+        section_type="conclusion",
+        section_name="Conclusion",
+        summary="",
+        selected_sentence_count=0,
+        source_sentence_indexes=[],
+    )
+
+
+def test_summarize_sections_keeps_only_supported_academic_sections_in_order() -> None:
+    sections = [
+        _section("title", "Title", "Local Thesis Assistant"),
+        _section("abstract", "Abstract", "This study evaluates local retrieval. It is useful."),
+        _section("methodology", "Methodology", "We cleaned PDFs. We chunked sections."),
+        _section("references", "References", "[1] Smith, J."),
+    ]
+
+    summaries = summarize_sections(sections, max_sentences_per_section=1)
+
+    assert [summary.section_type for summary in summaries] == ["abstract", "methodology"]
+    assert [summary.section_name for summary in summaries] == ["Abstract", "Methodology"]
+    assert all(summary.selected_sentence_count == 1 for summary in summaries)
+
+
+def test_summarize_sections_returns_section_specific_outputs() -> None:
+    sections = [
+        _section(
+            "abstract",
+            "Abstract",
+            "This study evaluates local retrieval. "
+            "The abstract highlights document intelligence.",
+        ),
+        _section(
+            "methodology",
+            "Methodology",
+            "We cleaned extracted PDF text. " "The methodology uses chunk overlap.",
+        ),
+        _section(
+            "conclusion",
+            "Conclusion",
+            "The assistant supports thesis review. "
+            "The conclusion recommends local-first analysis.",
+        ),
+    ]
+
+    summaries = summarize_sections(
+        sections,
+        max_sentences_per_section=1,
+        max_words_per_section=9,
+    )
+
+    summaries_by_section = {summary.section_name: summary.summary for summary in summaries}
+    assert summaries_by_section["Abstract"] in {
+        "This study evaluates local retrieval.",
+        "The abstract highlights document intelligence.",
+    }
+    assert summaries_by_section["Methodology"] in {
+        "We cleaned extracted PDF text.",
+        "The methodology uses chunk overlap.",
+    }
+    assert summaries_by_section["Conclusion"] in {
+        "The assistant supports thesis review.",
+        "The conclusion recommends local-first analysis.",
+    }
+    assert len(set(summaries_by_section.values())) == 3
+
+
+def test_summarize_sections_returns_empty_list_for_empty_input() -> None:
+    assert summarize_sections([]) == []
+    assert summarize_sections(None) == []
+
+
+def test_summarize_section_rejects_invalid_limits() -> None:
+    section = _section("abstract", "Abstract", "Local retrieval works.")
+
+    with pytest.raises(ValueError, match="sentence limit"):
+        summarize_section(section, max_sentences=0)
+
+    with pytest.raises(ValueError, match="word limit"):
+        summarize_section(section, max_words=0)

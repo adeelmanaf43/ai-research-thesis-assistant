@@ -12,6 +12,7 @@ from backend.app.schemas.document import (
     DocumentLocalAnalysisResponse,
     DocumentOverviewResponse,
     DocumentResponse,
+    DocumentSectionSummariesResponse,
 )
 from backend.app.services.chunking import (
     ChunkPersistenceError,
@@ -27,7 +28,9 @@ from backend.app.services.document_service import (
     count_words,
     create_document_overview_local_analysis_for_document,
     create_document_record,
+    create_document_section_summaries_local_analysis,
     create_section_detection_analysis,
+    get_document_section_summaries,
     get_latest_document_overview_local_analysis,
     is_ocr_likely_needed,
     list_documents_by_project,
@@ -137,6 +140,62 @@ def get_document_local_overview_analysis_route(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Local overview analysis not found. Trigger local analysis first.",
+        )
+
+    return _local_analysis_response(analysis)
+
+
+@overview_router.get(
+    "/{document_id}/summaries/sections",
+    response_model=DocumentSectionSummariesResponse,
+)
+def get_document_section_summaries_route(
+    document_id: int,
+    db: Session = Depends(get_db),
+) -> dict:
+    try:
+        section_summaries = get_document_section_summaries(db, document_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+
+    if section_summaries is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found. Upload a document or use an existing document ID.",
+        )
+
+    return section_summaries.to_dict()
+
+
+@overview_router.post(
+    "/{document_id}/analysis/section-summaries",
+    response_model=DocumentLocalAnalysisResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_document_section_summaries_analysis_route(
+    document_id: int,
+    db: Session = Depends(get_db),
+) -> dict:
+    try:
+        analysis = create_document_section_summaries_local_analysis(db, document_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    except DocumentProcessingError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        ) from exc
+
+    if analysis is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found. Upload a document or use an existing document ID.",
         )
 
     return _local_analysis_response(analysis)

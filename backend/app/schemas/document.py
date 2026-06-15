@@ -67,3 +67,20 @@ class DocumentLocalAnalysisResponse(BaseModel):
     provider_mode: str
     output_json: dict[str, Any]
     created_at: datetime
+
+
+class SectionSummaryResponse(BaseModel):
+    section_name: str
+    section_type: str
+    summary: str
+    selected_sentence_count: int
+    source_sentence_indexes: list[int]
+    confidence: float = Field(ge=0.0, le=1.0)
+    limitations: list[str]
+
+
+class DocumentSectionSummariesResponse(BaseModel):
+    document_id: int
+    summaries: list[SectionSummaryResponse]
+    source_section_names: list[str]
+    limitations: list[str]

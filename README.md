@@ -2,7 +2,7 @@
 
 A local-first document intelligence web app for students, researchers, thesis writers, academic freelancers, and analysts.
 
-The project is designed to keep working without paid APIs, mandatory Ollama, or cloud services. The current foundation includes project management, safe PDF upload, local PDF text extraction, deterministic text cleaning, local keyword/statistics analysis, tests, and documentation.
+The project is designed to keep working without paid APIs, mandatory Ollama, or cloud services. The current foundation includes project management, safe PDF upload, local PDF text extraction, deterministic text cleaning, local keyword/statistics analysis, extractive section summaries, tests, and documentation.
 
 ## Problem
 
@@ -109,12 +109,12 @@ Run the frontend:
 
 ## Current Features
 
-Week 3, Day 1: Local keyword extraction and document statistics foundation.
+Week 3, Day 2: Local extractive section summaries.
 
 Included now:
 
 - FastAPI backend skeleton with health endpoints
-- Streamlit frontend shell with optional backend document overview lookup
+- Streamlit frontend shell with optional backend document overview and section summary lookup
 - Local configuration using environment variables
 - SQLAlchemy SQLite database foundation
 - Base ORM models for projects, documents, chunks, analyses, and chat history
@@ -138,8 +138,10 @@ Included now:
 - Local document statistics with word count by section, chunk count by section, reference count estimate, and basic readability metrics
 - Local overview analysis storage using `analysis_type="document_overview_local"`
 - API endpoints to generate and fetch stored local overview analysis
+- Local extractive section summaries for abstract, introduction, methodology, results, discussion, and conclusion sections
+- Local section summary analysis storage using `analysis_type="section_summaries_local"` and `provider_mode="local"`
 - Project-scoped document listing endpoint that hides internal storage paths
-- Streamlit document overview panel that loads backend overview data when FastAPI is running
+- Streamlit document overview panel that loads backend overview and section summary data when FastAPI is running
 - Ruff linting and Black formatting configuration
 - Pytest setup and foundation tests
 - Documentation starter set
@@ -175,7 +177,14 @@ Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/analys
 Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/analysis/local-overview"
 ```
 
-The Streamlit frontend can load this overview when the backend is running. Use the default backend URL or set `THESIS_ASSISTANT_BACKEND_URL` before launching Streamlit.
+Example section summaries:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/summaries/sections"
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/analysis/section-summaries" -Method Post
+```
+
+The Streamlit frontend can load the document overview and section summaries when the backend is running. Use the default backend URL or set `THESIS_ASSISTANT_BACKEND_URL` before launching Streamlit.
 
 ## Roadmap
 
@@ -183,9 +192,9 @@ Near-term milestones:
 
 - Public chunk API responses
 - Full frontend project and upload workflow
-- Local extractive summaries
 - TF-IDF search
 - Source-grounded Q&A
+- Richer frontend display for local analysis and section summaries
 - Literature review matrix
 - Multi-paper comparison
 - Markdown, DOCX, and PDF report export
@@ -202,7 +211,8 @@ Not included yet:
 - Public API access to raw chunk records
 - Perfect section detection for unusual headings or damaged PDF extraction output
 - Public chunk API responses
-- Full frontend display for local analysis output
+- Full frontend display for all local analysis output
+- Generative summaries or rewritten prose
 - LLM providers
 - RAG/retrieval
 - Report export
@@ -211,7 +221,7 @@ Not included yet:
 - Docker
 - Cloud AI APIs
 
-The current upload API stores PDF bytes, creates document metadata, attempts local PyMuPDF extraction, runs deterministic text cleaning, saves internal raw/cleaned text artifacts, stores detected sections as local analysis output, and persists internal chunks after successful section detection. The local overview analysis API can generate and store deterministic keyword/statistics output from processed documents. Section detection, keyword extraction, reference counting, and readability metrics are rule-based and explainable, not replacements for semantic document understanding. The app does not summarize or analyze document content with AI yet.
+The current upload API stores PDF bytes, creates document metadata, attempts local PyMuPDF extraction, runs deterministic text cleaning, saves internal raw/cleaned text artifacts, stores detected sections as local analysis output, and persists internal chunks after successful section detection. The local overview analysis API can generate and store deterministic keyword/statistics output from processed documents. Section summaries are extractive and select source sentences from detected sections rather than generating new prose, and they can be saved as local analysis output with `provider_mode="local"`. Section detection, keyword extraction, reference counting, readability metrics, and extractive summaries are rule-based and explainable, not replacements for semantic document understanding. The app does not summarize or analyze document content with an AI provider yet.
 
 ## Screenshots
 
