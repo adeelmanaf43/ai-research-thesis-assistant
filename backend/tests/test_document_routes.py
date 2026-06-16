@@ -17,6 +17,7 @@ from backend.app.core.database import (
 )
 from backend.app.main import create_app
 from backend.app.models.analysis import Analysis
+from backend.app.models.chat_history import ChatHistory
 from backend.app.models.chunk import Chunk
 from backend.app.models.document import Document
 from backend.app.schemas.document import DocumentCreate
@@ -869,6 +870,170 @@ async def test_search_document_chunks_route_validates_query_and_top_k(
     assert blank_query_response.json()["detail"] == "Search query must not be empty."
     assert invalid_top_k_response.status_code == 422
     assert invalid_top_k_response.json()["detail"] == "top_k must be a positive integer."
+
+
+@pytest.mark.anyio
+async def test_chat_with_document_route_returns_local_answer_and_stores_history(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    document_id = _create_analysis_ready_document(document_api_settings)
+
+    async with document_api_client as client:
+        response = await client.post(
+            f"/api/documents/{document_id}/chat",
+            json={"question": "What supports local analysis?", "top_k": 2},
+        )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["document_id"] == document_id
+    assert payload["question"] == "What supports local analysis?"
+    assert payload["answer_found"] is True
+    assert payload["provider_mode"] == "local"
+    assert "Retrieval retrieval supports local analysis." in payload["answer"]
+    assert payload["source_chunks"][0]["section_name"] == "Introduction"
+    assert payload["source_chunks"][0]["score"] > 0
+    assert payload["limitations"]
+
+    database_engine = create_database_engine(document_api_settings)
+    session_factory = get_session_factory(database_engine)
+    with session_factory() as session:
+        stored_chat = session.scalar(
+            select(ChatHistory).where(ChatHistory.id == payload["chat_id"])
+        )
+        assert stored_chat is not None
+        assert stored_chat.document_id == document_id
+        assert stored_chat.question == "What supports local analysis?"
+        assert stored_chat.answer == payload["answer"]
+        assert stored_chat.provider_mode == "local"
+    database_engine.dispose()
+
+
+@pytest.mark.anyio
+async def test_chat_with_document_route_returns_source_chunk_metadata(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    document_id = _create_analysis_ready_document(document_api_settings)
+
+    async with document_api_client as client:
+        response = await client.post(
+            f"/api/documents/{document_id}/chat",
+            json={"question": "What supports local analysis?", "top_k": 2},
+        )
+
+    assert response.status_code == 201
+    source_chunk = response.json()["source_chunks"][0]
+    assert source_chunk["chunk_id"] > 0
+    assert source_chunk["chunk_index"] == 0
+    assert source_chunk["section_name"] == "Introduction"
+    assert source_chunk["page_start"] == 1
+    assert source_chunk["page_end"] == 1
+    assert source_chunk["score"] > 0
+    assert source_chunk["snippet"] == "Retrieval retrieval supports local analysis."
+
+
+@pytest.mark.anyio
+async def test_chat_with_document_route_says_when_answer_not_found(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    document_id = _create_analysis_ready_document(document_api_settings)
+
+    async with document_api_client as client:
+        response = await client.post(
+            f"/api/documents/{document_id}/chat",
+            json={"question": "What quantum model was used?", "top_k": 2},
+        )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["answer_found"] is False
+    assert payload["answer"].startswith("I could not find the answer")
+    assert payload["source_chunks"] == []
+
+
+@pytest.mark.anyio
+async def test_chat_with_document_route_stores_history_when_answer_not_found(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    document_id = _create_analysis_ready_document(document_api_settings)
+
+    async with document_api_client as client:
+        response = await client.post(
+            f"/api/documents/{document_id}/chat",
+            json={"question": "What quantum model was used?", "top_k": 2},
+        )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["answer_found"] is False
+
+    database_engine = create_database_engine(document_api_settings)
+    session_factory = get_session_factory(database_engine)
+    with session_factory() as session:
+        stored_chat = session.scalar(
+            select(ChatHistory).where(ChatHistory.id == payload["chat_id"])
+        )
+        assert stored_chat is not None
+        assert stored_chat.document_id == document_id
+        assert stored_chat.question == "What quantum model was used?"
+        assert stored_chat.answer == payload["answer"]
+        assert stored_chat.provider_mode == "local"
+    database_engine.dispose()
+
+
+@pytest.mark.anyio
+async def test_chat_with_document_route_returns_404_for_missing_document(
+    document_api_client: httpx.AsyncClient,
+) -> None:
+    async with document_api_client as client:
+        response = await client.post(
+            "/api/documents/999/chat",
+            json={"question": "What did the study find?"},
+        )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == (
+        "Document not found. Upload a document or use an existing document ID."
+    )
+
+
+@pytest.mark.anyio
+async def test_chat_with_document_route_validates_document_id(
+    document_api_client: httpx.AsyncClient,
+) -> None:
+    async with document_api_client as client:
+        response = await client.post(
+            "/api/documents/0/chat",
+            json={"question": "What did the study find?"},
+        )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Document ID must be a positive integer."
+
+
+@pytest.mark.anyio
+async def test_chat_with_document_route_validates_question_and_top_k(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    document_id = _create_analysis_ready_document(document_api_settings)
+
+    async with document_api_client as client:
+        blank_question_response = await client.post(
+            f"/api/documents/{document_id}/chat",
+            json={"question": "   "},
+        )
+        invalid_top_k_response = await client.post(
+            f"/api/documents/{document_id}/chat",
+            json={"question": "What did retrieval improve?", "top_k": 0},
+        )
+
+    assert blank_question_response.status_code == 422
+    assert invalid_top_k_response.status_code == 422
 
 
 @pytest.mark.anyio

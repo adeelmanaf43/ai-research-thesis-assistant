@@ -206,6 +206,14 @@ Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/search
 
 Expected response status: `200 OK` when document `1` exists.
 
+Ask a local source-grounded question:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/chat" -Method Post -ContentType "application/json" -Body '{"question":"What sample did the methodology use?","top_k":3}'
+```
+
+Expected response status: `201 Created` when document `1` exists.
+
 Upload validation:
 
 - The project must exist.
@@ -224,6 +232,8 @@ The research information endpoint extracts research problem, objectives, researc
 This local extraction is reliable for recognizable academic patterns, but it is not semantic inference. It works best when papers use explicit wording such as "objective", "research question", "methodology", "sample", "findings", "limitation", or "future work". Unusual prose, damaged PDF extraction, or OCR-only documents may leave fields empty.
 
 The TF-IDF retrieval service searches stored chunks locally with scikit-learn. The document search endpoint supports a text query, `top_k`, and optional `include_full_text`. The API response includes chunk ID, chunk index, section name, page range, score, `text_preview`, and optional `full_text`. It does not call an LLM or generate answers.
+
+The local chat endpoint retrieves top chunks, creates an extractive answer with `backend/app/services/llm/local_provider.py`, stores a `chat_history` row with `provider_mode="local"`, and returns source chunks. If the retrieved chunks do not contain the answer, it says so instead of guessing.
 
 Document processing lifecycle:
 

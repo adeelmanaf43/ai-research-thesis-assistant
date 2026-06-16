@@ -95,3 +95,29 @@ class RetrievalResultResponse(BaseModel):
     score: float = Field(ge=0.0)
     text_preview: str
     full_text: str | None = None
+
+
+class DocumentChatRequest(BaseModel):
+    question: str = Field(min_length=1)
+    top_k: int = Field(default=5, ge=1)
+
+
+class SourceChunkResponse(BaseModel):
+    chunk_id: int
+    chunk_index: int
+    section_name: str | None = None
+    page_start: int | None = None
+    page_end: int | None = None
+    score: float = Field(ge=0.0)
+    snippet: str
+
+
+class DocumentChatResponse(BaseModel):
+    chat_id: int
+    document_id: int
+    question: str
+    answer: str
+    answer_found: bool
+    provider_mode: str
+    source_chunks: list[SourceChunkResponse]
+    limitations: list[str]

@@ -1,6 +1,8 @@
 """API schema package."""
 
 from backend.app.schemas.document import (
+    DocumentChatRequest,
+    DocumentChatResponse,
     DocumentCreate,
     DocumentLocalAnalysisResponse,
     DocumentMetadataUpdate,
@@ -11,6 +13,7 @@ from backend.app.schemas.document import (
     RetrievalResultResponse,
     SectionOverviewResponse,
     SectionSummaryResponse,
+    SourceChunkResponse,
 )
 from backend.app.schemas.health import HealthResponse
 from backend.app.schemas.project import (
@@ -23,6 +26,8 @@ from backend.app.schemas.project import (
 
 __all__ = [
     "DocumentCreate",
+    "DocumentChatRequest",
+    "DocumentChatResponse",
     "DocumentLocalAnalysisResponse",
     "DocumentMetadataUpdate",
     "DocumentOverviewResponse",
@@ -38,4 +43,5 @@ __all__ = [
     "RetrievalResultResponse",
     "SectionOverviewResponse",
     "SectionSummaryResponse",
+    "SourceChunkResponse",
 ]

@@ -333,12 +333,27 @@ Interview explanation:
 
 > I added TF-IDF retrieval before FAISS or Chroma because the product first needs a dependable local baseline. TF-IDF works directly on stored chunks, requires no embedding model, and is easy to test. Later vector search can improve semantic matching, but it should be compared against this baseline instead of added as premature complexity.
 
+## Local Source-Grounded Q&A Fallback
+
+The local provider answers questions from retrieved chunks without calling an LLM. It selects source sentences that overlap with the question and returns those sentences as an extractive answer.
+
+Why this matters:
+
+- It prevents hallucination by refusing to answer when retrieved chunks do not contain the answer.
+- It always returns source snippets so the user can inspect the evidence.
+- It proves the product can support basic Q&A behavior without Ollama or cloud APIs.
+- It creates a safe fallback for future provider chains.
+
+Interview explanation:
+
+> I implemented local Q&A as an extractive fallback, not a generator. The provider uses retrieved chunks, selects evidence sentences, and says when the answer is not found. That keeps the system honest and gives future LLM providers a reliable local backup.
+
 ## What Was Intentionally Not Built
 
 The current foundation intentionally does not include:
 
 - OCR
-- RAG and generated source-grounded answers
+- Generated source-grounded answers
 - Semantic vector retrieval with FAISS or Chroma
 - Local LLM calls
 - Cloud AI APIs

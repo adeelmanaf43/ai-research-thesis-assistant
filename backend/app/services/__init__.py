@@ -1,5 +1,10 @@
 """Domain service boundary for application workflows."""
 
+from backend.app.services.chat_service import (
+    ChatPersistenceError,
+    DocumentChatAnswer,
+    answer_document_question,
+)
 from backend.app.services.chunking import (
     DEFAULT_CHUNK_SIZE_WORDS,
     DEFAULT_OVERLAP_WORDS,
@@ -57,6 +62,11 @@ from backend.app.services.document_storage import (
     get_project_documents_dir,
     sanitize_upload_filename,
 )
+from backend.app.services.llm import (
+    LocalAnswer,
+    SourceSnippet,
+    answer_question,
+)
 from backend.app.services.local_analysis import (
     DocumentStatistics,
     KeywordScore,
@@ -112,9 +122,12 @@ from backend.app.services.text_cleaning import (
 __all__ = [
     "build_cleaning_warnings",
     "build_document_statistics",
+    "answer_question",
+    "answer_document_question",
     "calculate_cleaning_statistics",
     "calculate_readability_metrics",
     "CleaningStatistics",
+    "ChatPersistenceError",
     "ChunkPersistenceError",
     "classify_heading",
     "clean_text",
@@ -133,6 +146,7 @@ __all__ = [
     "DocumentStatistics",
     "DocumentProcessingError",
     "DocumentOverview",
+    "DocumentChatAnswer",
     "DocumentSectionSummaries",
     "DocumentStorageError",
     "estimate_reference_count",
@@ -165,6 +179,7 @@ __all__ = [
     "KeywordScore",
     "list_documents_by_project",
     "list_projects",
+    "LocalAnswer",
     "fix_broken_lines",
     "normalize_whitespace",
     "remove_control_characters",
@@ -184,6 +199,7 @@ __all__ = [
     "SectionSummaryResult",
     "SectionType",
     "SectionOverview",
+    "SourceSnippet",
     "search_chunks",
     "split_sections_into_chunks",
     "split_text_into_chunks",

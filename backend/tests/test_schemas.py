@@ -4,6 +4,8 @@ import pytest
 from pydantic import ValidationError
 
 from backend.app.schemas import (
+    DocumentChatRequest,
+    DocumentChatResponse,
     DocumentCreate,
     DocumentMetadataUpdate,
     DocumentOverviewResponse,
@@ -239,3 +241,44 @@ def test_retrieval_result_response_rejects_negative_score() -> None:
             score=-0.1,
             text_preview="Invalid score.",
         )
+
+
+def test_document_chat_request_validates_question_and_top_k() -> None:
+    schema = DocumentChatRequest(question=" What did retrieval improve? ", top_k=3)
+
+    assert schema.question == " What did retrieval improve? "
+    assert schema.top_k == 3
+
+    with pytest.raises(ValidationError):
+        DocumentChatRequest(question="", top_k=3)
+    with pytest.raises(ValidationError):
+        DocumentChatRequest(question="What did retrieval improve?", top_k=0)
+
+
+def test_document_chat_response_serializes_source_chunks() -> None:
+    payload = DocumentChatResponse(
+        chat_id=5,
+        document_id=10,
+        question="What did retrieval improve?",
+        answer="Retrieval improved citation confidence.",
+        answer_found=True,
+        provider_mode="local",
+        source_chunks=[
+            {
+                "chunk_id": 12,
+                "chunk_index": 0,
+                "section_name": "Results",
+                "page_start": 2,
+                "page_end": 3,
+                "score": 0.74,
+                "snippet": "Retrieval improved citation confidence.",
+            }
+        ],
+        limitations=["Local fallback answers are extractive."],
+    ).model_dump()
+
+    assert payload["chat_id"] == 5
+    assert payload["answer_found"] is True
+    assert payload["provider_mode"] == "local"
+    assert payload["source_chunks"][0]["chunk_id"] == 12
+    assert payload["source_chunks"][0]["snippet"] == "Retrieval improved citation confidence."

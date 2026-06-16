@@ -27,6 +27,7 @@ http://127.0.0.1:8000
 | `GET`    | `/api/documents/{document_id}/analysis/local-overview` | Fetch latest stored local overview analysis  |
 | `GET`    | `/api/documents/{document_id}/summaries/sections`     | Fetch local extractive summaries by section  |
 | `GET`    | `/api/documents/{document_id}/search`                 | Search stored chunks locally with TF-IDF     |
+| `POST`   | `/api/documents/{document_id}/chat`                   | Ask a local source-grounded document question |
 | `POST`   | `/api/documents/{document_id}/analysis/section-summaries` | Generate and store local section summaries |
 | `POST`   | `/api/analysis/{document_id}/research-info`           | Generate and store local research info extraction |
 
@@ -586,6 +587,59 @@ Search behavior:
 - Can include full chunk text with `include_full_text=true`.
 - Does not generate answers, call Ollama, call cloud providers, or perform semantic retrieval.
 
+### `POST /api/documents/{document_id}/chat`
+
+Retrieves top chunks for a document, creates a local extractive answer, stores chat history, and returns the answer with source chunks.
+
+Example request:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/chat" -Method Post -ContentType "application/json" -Body '{"question":"What sample did the methodology use?","top_k":3}'
+```
+
+Example response:
+
+```json
+{
+  "chat_id": 8,
+  "document_id": 1,
+  "question": "What sample did the methodology use?",
+  "answer": "The methodology used a survey sample of postgraduate thesis writers.",
+  "answer_found": true,
+  "provider_mode": "local",
+  "source_chunks": [
+    {
+      "chunk_id": 12,
+      "chunk_index": 3,
+      "section_name": "Methodology",
+      "page_start": 4,
+      "page_end": 5,
+      "score": 0.73421,
+      "snippet": "The methodology used a survey sample of postgraduate thesis writers."
+    }
+  ],
+  "limitations": [
+    "Local fallback answers are extractive and use only retrieved source chunks.",
+    "If retrieved chunks do not contain the answer, the provider must say so."
+  ]
+}
+```
+
+Expected status:
+
+- `201 Created` when the document exists and chat history is stored.
+- `404 Not Found` when the document does not exist.
+- `422 Unprocessable Entity` when the document ID, question, or `top_k` is invalid.
+- `503 Service Unavailable` when local TF-IDF dependencies are not installed.
+
+Chat behavior:
+
+- Retrieves chunks with local TF-IDF search.
+- Answers extractively from retrieved chunks only.
+- Stores `question`, `answer`, `document_id`, `project_id`, and `provider_mode="local"` in `chat_history`.
+- Says when the answer is not found instead of guessing.
+- Does not call Ollama, cloud providers, or paid APIs.
+
 ### `POST /api/documents/{document_id}/analysis/section-summaries`
 
 Generates local extractive section summaries and stores the output JSON in SQLite under `analysis_type="section_summaries_local"` with `provider_mode="local"`.
@@ -707,7 +761,7 @@ Research information behavior:
 - Section detection is rule-based and depends on extracted heading text. It can miss non-standard academic structures, merge unsupported sections into the nearest known section, or infer a weak title from the first non-empty line.
 - Section confidence values are explainable heuristic scores, not statistical model confidence.
 - Chunks are stored internally; only aggregate `chunk_count` is exposed through the overview response.
-- Local keyword/statistics analysis, persisted extractive section summaries, persisted research information extraction, and local TF-IDF document search exist, but no RAG, Q&A, generative summaries, comparison, or export yet.
+- Local keyword/statistics analysis, persisted extractive section summaries, persisted research information extraction, local TF-IDF document search, and local extractive chat exist, but no generative RAG, comparison, or export yet.
 - No auth or permissions layer yet.
 - No Ollama or cloud provider calls yet.
 - Upload validation checks extension, provided content type, and configured file size before local extraction.

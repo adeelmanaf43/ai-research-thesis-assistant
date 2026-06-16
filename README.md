@@ -143,6 +143,8 @@ Included now:
 - Local research information extraction storage using `analysis_type="research_info_local"` and `provider_mode="local"`
 - Service-level TF-IDF retrieval over stored chunks with document filtering and source chunk metadata
 - Local document search endpoint with preview-first retrieval results
+- Local extractive Q&A fallback that answers only from retrieved source chunks
+- Local document chat endpoint that stores `ChatHistory` with `provider_mode="local"`
 - Project-scoped document listing endpoint that hides internal storage paths
 - Streamlit document overview panel that loads backend overview and section summary data when FastAPI is running
 - Ruff linting and Black formatting configuration
@@ -199,6 +201,12 @@ Example local document search:
 
 ```powershell
 Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/search?q=methodology%20sample&top_k=3"
+```
+
+Example local document chat:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/chat" -Method Post -ContentType "application/json" -Body '{"question":"What sample did the methodology use?","top_k":3}'
 ```
 
 The Streamlit frontend can load the document overview and section summaries when the backend is running. Use the default backend URL or set `THESIS_ASSISTANT_BACKEND_URL` before launching Streamlit.

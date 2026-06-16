@@ -9,12 +9,18 @@ from backend.app.core.database import get_db
 from backend.app.models.analysis import Analysis
 from backend.app.models.document import Document
 from backend.app.schemas.document import (
+    DocumentChatRequest,
+    DocumentChatResponse,
     DocumentCreate,
     DocumentLocalAnalysisResponse,
     DocumentOverviewResponse,
     DocumentResponse,
     DocumentSectionSummariesResponse,
     RetrievalResultResponse,
+)
+from backend.app.services.chat_service import (
+    ChatPersistenceError,
+    answer_document_question,
 )
 from backend.app.services.chunking import (
     ChunkPersistenceError,
@@ -215,6 +221,48 @@ def search_document_chunks_route(
         ) from exc
 
     return [result.to_response_dict(include_full_text=include_full_text) for result in results]
+
+
+@overview_router.post(
+    "/{document_id}/chat",
+    response_model=DocumentChatResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def chat_with_document_route(
+    document_id: int,
+    chat_request: DocumentChatRequest,
+    db: Session = Depends(get_db),
+) -> dict:
+    try:
+        chat_answer = answer_document_question(
+            db,
+            document_id,
+            chat_request.question,
+            top_k=chat_request.top_k,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    except RetrievalDependencyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    except ChatPersistenceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        ) from exc
+
+    if chat_answer is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found. Upload a document or use an existing document ID.",
+        )
+
+    return chat_answer.to_dict()
 
 
 @overview_router.post(
