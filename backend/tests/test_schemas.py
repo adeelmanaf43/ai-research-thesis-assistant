@@ -14,6 +14,7 @@ from backend.app.schemas import (
     ProjectListItem,
     ProjectResponse,
     ProjectUpdate,
+    RetrievalResultResponse,
 )
 
 
@@ -189,3 +190,52 @@ def test_processing_summary_response_serializes_user_facing_state() -> None:
         "requires_attention": True,
         "next_step": "Use a text-based PDF.",
     }
+
+
+def test_retrieval_result_response_serializes_source_chunk_metadata() -> None:
+    payload = RetrievalResultResponse(
+        chunk_id=12,
+        chunk_index=4,
+        section_name="Methodology",
+        page_start=3,
+        page_end=5,
+        score=0.734,
+        text_preview="The methodology used local TF-IDF retrieval.",
+    ).model_dump()
+
+    assert payload == {
+        "chunk_id": 12,
+        "chunk_index": 4,
+        "section_name": "Methodology",
+        "page_start": 3,
+        "page_end": 5,
+        "score": 0.734,
+        "text_preview": "The methodology used local TF-IDF retrieval.",
+        "full_text": None,
+    }
+    assert "document_id" not in payload
+
+
+def test_retrieval_result_response_allows_optional_full_text() -> None:
+    payload = RetrievalResultResponse(
+        chunk_id=12,
+        chunk_index=4,
+        score=0.734,
+        text_preview="Preview only.",
+        full_text="Preview only. Extra source context.",
+    ).model_dump()
+
+    assert payload["section_name"] is None
+    assert payload["page_start"] is None
+    assert payload["page_end"] is None
+    assert payload["full_text"] == "Preview only. Extra source context."
+
+
+def test_retrieval_result_response_rejects_negative_score() -> None:
+    with pytest.raises(ValidationError):
+        RetrievalResultResponse(
+            chunk_id=12,
+            chunk_index=4,
+            score=-0.1,
+            text_preview="Invalid score.",
+        )

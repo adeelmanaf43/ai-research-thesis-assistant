@@ -141,6 +141,8 @@ Included now:
 - Local extractive section summaries for abstract, introduction, methodology, results, discussion, and conclusion sections
 - Local section summary analysis storage using `analysis_type="section_summaries_local"` and `provider_mode="local"`
 - Local research information extraction storage using `analysis_type="research_info_local"` and `provider_mode="local"`
+- Service-level TF-IDF retrieval over stored chunks with document filtering and source chunk metadata
+- Local document search endpoint with preview-first retrieval results
 - Project-scoped document listing endpoint that hides internal storage paths
 - Streamlit document overview panel that loads backend overview and section summary data when FastAPI is running
 - Ruff linting and Black formatting configuration
@@ -193,6 +195,12 @@ Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/analysis/1/researc
 
 Local research information extraction is reliable for clear academic writing patterns, but it is intentionally limited. It can extract common fields such as objectives, methods, samples, findings, limitations, and future work without Ollama or cloud APIs. It does not infer hidden meaning from vague prose, and it returns missing fields honestly as `null` with `0.0` confidence.
 
+Example local document search:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/search?q=methodology%20sample&top_k=3"
+```
+
 The Streamlit frontend can load the document overview and section summaries when the backend is running. Use the default backend URL or set `THESIS_ASSISTANT_BACKEND_URL` before launching Streamlit.
 
 ## Roadmap
@@ -201,7 +209,6 @@ Near-term milestones:
 
 - Public chunk API responses
 - Full frontend project and upload workflow
-- TF-IDF search
 - Source-grounded Q&A
 - Richer frontend display for local analysis and section summaries
 - Literature review matrix
@@ -223,7 +230,7 @@ Not included yet:
 - Full frontend display for all local analysis output
 - Generative summaries or rewritten prose
 - LLM providers
-- RAG/retrieval
+- RAG and source-grounded answer generation
 - Report export
 - Authentication
 - Payments

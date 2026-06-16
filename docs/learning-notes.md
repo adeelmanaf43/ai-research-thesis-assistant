@@ -310,12 +310,36 @@ Interview explanation:
 
 > I built research information extraction locally before adding LLMs. The system can identify useful thesis fields using deterministic rules, store the result in SQLite, and explain confidence and missing fields honestly. This creates a dependable fallback layer that still works when model providers are unavailable.
 
+## TF-IDF Retrieval Foundation
+
+The retrieval service searches stored document chunks with local TF-IDF scoring. It uses scikit-learn, not an LLM, and returns source chunk metadata with each result.
+
+Why this matters:
+
+- It turns stored chunks into searchable evidence for later Q&A.
+- It keeps retrieval local, deterministic, and testable.
+- It supports document-level filtering so one paper can be searched independently from another.
+- It uses preview-first response data so future endpoints can avoid returning full chunk text unless requested.
+- It separates retrieval from answer generation, which keeps future source-grounded Q&A easier to reason about.
+
+Why TF-IDF before FAISS or Chroma:
+
+- It needs no embedding model and no vector index service.
+- It is small enough for a local-first MVP and easy to run on weak machines.
+- It gives deterministic test results, which is valuable before adding semantic retrieval.
+- It creates a baseline that future FAISS, Chroma, or embedding search can be compared against.
+
+Interview explanation:
+
+> I added TF-IDF retrieval before FAISS or Chroma because the product first needs a dependable local baseline. TF-IDF works directly on stored chunks, requires no embedding model, and is easy to test. Later vector search can improve semantic matching, but it should be compared against this baseline instead of added as premature complexity.
+
 ## What Was Intentionally Not Built
 
 The current foundation intentionally does not include:
 
 - OCR
-- RAG or retrieval
+- RAG and generated source-grounded answers
+- Semantic vector retrieval with FAISS or Chroma
 - Local LLM calls
 - Cloud AI APIs
 - AI-generated summaries
@@ -331,4 +355,4 @@ Interview explanation:
 
 Use this concise explanation:
 
-> I built a local-first AI Research / Thesis Assistant foundation with FastAPI, SQLite, SQLAlchemy, Pydantic schemas, and a service-layer architecture. It supports project CRUD, safe PDF uploads, local PDF extraction, deterministic text cleaning, chunking, document overview, keyword extraction, and local statistics analysis. I intentionally kept AI providers optional so future summaries, search, and Q&A can build on clean local document processing instead of depending on paid APIs or model availability.
+> I built a local-first AI Research / Thesis Assistant foundation with FastAPI, SQLite, SQLAlchemy, Pydantic schemas, and a service-layer architecture. It supports project CRUD, safe PDF uploads, local PDF extraction, deterministic text cleaning, chunking, document overview, keyword extraction, local statistics analysis, and TF-IDF document search. I intentionally kept AI providers optional so future Q&A can build on clean local document processing instead of depending on paid APIs or model availability.

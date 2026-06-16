@@ -1,6 +1,6 @@
 # API Reference
 
-This reference documents the current API surface for the local-first AI Research / Thesis Assistant through Week 3 Day 3. The API works without paid API keys, cloud providers, Docker, authentication, or mandatory Ollama.
+This reference documents the current API surface for the local-first AI Research / Thesis Assistant through Week 3 Day 4. The API works without paid API keys, cloud providers, Docker, authentication, or mandatory Ollama.
 
 Base URL for local development:
 
@@ -26,6 +26,7 @@ http://127.0.0.1:8000
 | `POST`   | `/api/documents/{document_id}/analysis/local-overview` | Generate and store local overview analysis   |
 | `GET`    | `/api/documents/{document_id}/analysis/local-overview` | Fetch latest stored local overview analysis  |
 | `GET`    | `/api/documents/{document_id}/summaries/sections`     | Fetch local extractive summaries by section  |
+| `GET`    | `/api/documents/{document_id}/search`                 | Search stored chunks locally with TF-IDF     |
 | `POST`   | `/api/documents/{document_id}/analysis/section-summaries` | Generate and store local section summaries |
 | `POST`   | `/api/analysis/{document_id}/research-info`           | Generate and store local research info extraction |
 
@@ -538,6 +539,53 @@ Section summary behavior:
 - Includes confidence and limitations because section detection and sentence scoring are heuristic.
 - Does not call Ollama, cloud providers, or paid APIs.
 
+### `GET /api/documents/{document_id}/search`
+
+Searches stored chunks for one document with local TF-IDF retrieval.
+
+Query parameters:
+
+- `q`: required search query.
+- `top_k`: optional maximum number of chunks to return. Default is `5`.
+- `include_full_text`: optional boolean. Default is `false`.
+
+Example request:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/search?q=methodology%20sample&top_k=3"
+```
+
+Example response:
+
+```json
+[
+  {
+    "chunk_id": 12,
+    "chunk_index": 3,
+    "section_name": "Methodology",
+    "page_start": 4,
+    "page_end": 5,
+    "score": 0.73421,
+    "text_preview": "The methodology used a survey sample of postgraduate thesis writers.",
+    "full_text": null
+  }
+]
+```
+
+Expected status:
+
+- `200 OK` when the document exists. Returns an empty list when no chunks match.
+- `404 Not Found` when the document does not exist.
+- `422 Unprocessable Entity` when the document ID, query, or `top_k` is invalid.
+- `503 Service Unavailable` when local TF-IDF dependencies are not installed.
+
+Search behavior:
+
+- Uses stored chunk text only.
+- Returns preview-first results by default.
+- Can include full chunk text with `include_full_text=true`.
+- Does not generate answers, call Ollama, call cloud providers, or perform semantic retrieval.
+
 ### `POST /api/documents/{document_id}/analysis/section-summaries`
 
 Generates local extractive section summaries and stores the output JSON in SQLite under `analysis_type="section_summaries_local"` with `provider_mode="local"`.
@@ -659,7 +707,7 @@ Research information behavior:
 - Section detection is rule-based and depends on extracted heading text. It can miss non-standard academic structures, merge unsupported sections into the nearest known section, or infer a weak title from the first non-empty line.
 - Section confidence values are explainable heuristic scores, not statistical model confidence.
 - Chunks are stored internally; only aggregate `chunk_count` is exposed through the overview response.
-- Local keyword/statistics analysis, persisted extractive section summaries, and persisted research information extraction exist, but no search, retrieval, RAG, Q&A, generative summaries, comparison, or export yet.
+- Local keyword/statistics analysis, persisted extractive section summaries, persisted research information extraction, and local TF-IDF document search exist, but no RAG, Q&A, generative summaries, comparison, or export yet.
 - No auth or permissions layer yet.
 - No Ollama or cloud provider calls yet.
 - Upload validation checks extension, provided content type, and configured file size before local extraction.

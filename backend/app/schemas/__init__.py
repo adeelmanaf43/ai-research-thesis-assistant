@@ -8,6 +8,7 @@ from backend.app.schemas.document import (
     DocumentResponse,
     DocumentSectionSummariesResponse,
     ProcessingSummaryResponse,
+    RetrievalResultResponse,
     SectionOverviewResponse,
     SectionSummaryResponse,
 )
@@ -34,6 +35,7 @@ __all__ = [
     "ProjectListItem",
     "ProjectResponse",
     "ProjectUpdate",
+    "RetrievalResultResponse",
     "SectionOverviewResponse",
     "SectionSummaryResponse",
 ]

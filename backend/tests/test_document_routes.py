@@ -734,6 +734,144 @@ async def test_get_document_section_summaries_route_returns_invalid_id_error(
 
 
 @pytest.mark.anyio
+async def test_search_document_chunks_route_returns_preview_results(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    document_id = _create_analysis_ready_document(document_api_settings)
+
+    async with document_api_client as client:
+        response = await client.get(
+            f"/api/documents/{document_id}/search",
+            params={"q": "local analysis retrieval", "top_k": 1},
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload) == 1
+    assert payload[0]["chunk_index"] == 0
+    assert payload[0]["section_name"] == "Introduction"
+    assert payload[0]["page_start"] == 1
+    assert payload[0]["page_end"] == 1
+    assert payload[0]["score"] > 0
+    assert payload[0]["text_preview"] == "Retrieval retrieval supports local analysis."
+    assert payload[0]["full_text"] is None
+    assert "document_id" not in payload[0]
+
+
+@pytest.mark.anyio
+async def test_search_document_chunks_route_can_include_full_text(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    document_id = _create_analysis_ready_document(document_api_settings)
+
+    async with document_api_client as client:
+        response = await client.get(
+            f"/api/documents/{document_id}/search",
+            params={
+                "q": "local analysis retrieval",
+                "top_k": 1,
+                "include_full_text": "true",
+            },
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload[0]["text_preview"] == "Retrieval retrieval supports local analysis."
+    assert payload[0]["full_text"] == "Retrieval retrieval supports local analysis."
+
+
+@pytest.mark.anyio
+async def test_search_document_chunks_route_respects_top_k_limit(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    document_id = _create_analysis_ready_document(document_api_settings)
+
+    async with document_api_client as client:
+        response = await client.get(
+            f"/api/documents/{document_id}/search",
+            params={"q": "retrieval", "top_k": 1},
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload) == 1
+    assert payload[0]["score"] > 0
+
+
+@pytest.mark.anyio
+async def test_search_document_chunks_route_returns_empty_list_for_no_matches(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    document_id = _create_analysis_ready_document(document_api_settings)
+
+    async with document_api_client as client:
+        response = await client.get(
+            f"/api/documents/{document_id}/search",
+            params={"q": "quantum astrophysics"},
+        )
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+@pytest.mark.anyio
+async def test_search_document_chunks_route_returns_404_for_missing_document(
+    document_api_client: httpx.AsyncClient,
+) -> None:
+    async with document_api_client as client:
+        response = await client.get(
+            "/api/documents/999/search",
+            params={"q": "retrieval"},
+        )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == (
+        "Document not found. Upload a document or use an existing document ID."
+    )
+
+
+@pytest.mark.anyio
+async def test_search_document_chunks_route_validates_document_id(
+    document_api_client: httpx.AsyncClient,
+) -> None:
+    async with document_api_client as client:
+        response = await client.get(
+            "/api/documents/0/search",
+            params={"q": "retrieval"},
+        )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Document ID must be a positive integer."
+
+
+@pytest.mark.anyio
+async def test_search_document_chunks_route_validates_query_and_top_k(
+    document_api_client: httpx.AsyncClient,
+    document_api_settings: Settings,
+) -> None:
+    document_id = _create_analysis_ready_document(document_api_settings)
+
+    async with document_api_client as client:
+        blank_query_response = await client.get(
+            f"/api/documents/{document_id}/search",
+            params={"q": "   "},
+        )
+        invalid_top_k_response = await client.get(
+            f"/api/documents/{document_id}/search",
+            params={"q": "retrieval", "top_k": 0},
+        )
+
+    assert blank_query_response.status_code == 422
+    assert blank_query_response.json()["detail"] == "Search query must not be empty."
+    assert invalid_top_k_response.status_code == 422
+    assert invalid_top_k_response.json()["detail"] == "top_k must be a positive integer."
+
+
+@pytest.mark.anyio
 async def test_get_document_local_overview_analysis_route_returns_404_when_missing(
     document_api_client: httpx.AsyncClient,
     document_api_settings: Settings,

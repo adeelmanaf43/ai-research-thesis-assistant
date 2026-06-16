@@ -84,3 +84,14 @@ class DocumentSectionSummariesResponse(BaseModel):
     summaries: list[SectionSummaryResponse]
     source_section_names: list[str]
     limitations: list[str]
+
+
+class RetrievalResultResponse(BaseModel):
+    chunk_id: int
+    chunk_index: int
+    section_name: str | None = None
+    page_start: int | None = None
+    page_end: int | None = None
+    score: float = Field(ge=0.0)
+    text_preview: str
+    full_text: str | None = None

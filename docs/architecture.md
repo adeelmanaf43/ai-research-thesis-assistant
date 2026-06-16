@@ -97,6 +97,10 @@ Local research information extraction starts in `backend/app/services/local_anal
 
 This extraction layer is intentionally reliable rather than magical. It handles recognizable academic signals such as objectives, research questions, methods, samples, variables, findings, limitations, and future work. It also returns `null` values and `0.0` confidence for fields it cannot find. It does not infer hidden meaning, rewrite the paper, or call an LLM. That makes the behavior safe, explainable, and useful as a fallback before future retrieval or optional AI layers are added.
 
+TF-IDF retrieval starts in `backend/app/services/retrieval.py`. It uses scikit-learn locally over stored chunk text, supports `top_k` ranking and document filtering, and returns source metadata for each matched chunk. The public route `GET /api/documents/{document_id}/search` exposes document-scoped search with `text_preview` by default and optional `full_text` when explicitly requested. The service does not call an LLM and does not generate answers. It only retrieves relevant stored chunks so later source-grounded Q&A can build on deterministic local search.
+
+TF-IDF is used before FAISS, Chroma, or another vector database on purpose. The current milestone needs a lightweight lexical baseline that works immediately with SQLite chunks, has no embedding model dependency, requires no background index server, and is easy to test with deterministic expectations. Vector search can be added later when semantic retrieval is needed, but it should be measured against this simpler local baseline instead of replacing it blindly.
+
 ## Project API
 
 Project routes live in `backend/app/api/routes_projects.py` and are mounted under `/api/projects`. They remain thin FastAPI handlers over the project service layer.

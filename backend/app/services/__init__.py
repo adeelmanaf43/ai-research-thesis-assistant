@@ -84,6 +84,11 @@ from backend.app.services.project_service import (
     list_projects,
     update_project,
 )
+from backend.app.services.retrieval import (
+    RetrievalDependencyError,
+    RetrievalResult,
+    search_chunks,
+)
 from backend.app.services.section_detection import (
     DetectedSection,
     SectionType,
@@ -166,6 +171,8 @@ __all__ = [
     "remove_repeated_page_artifacts",
     "repair_hyphenated_line_breaks",
     "replace_document_chunks",
+    "RetrievalDependencyError",
+    "RetrievalResult",
     "ReadabilityMetrics",
     "ResearchInformationField",
     "ResearchInformation",
@@ -177,6 +184,7 @@ __all__ = [
     "SectionSummaryResult",
     "SectionType",
     "SectionOverview",
+    "search_chunks",
     "split_sections_into_chunks",
     "split_text_into_chunks",
     "SectionSummary",

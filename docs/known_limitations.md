@@ -7,9 +7,9 @@
 - Section detection is rule-based and heading-driven; it can miss unusual headings, infer weak titles, or misclassify content when PDFs extract headings poorly
 - Section confidence scores are simple deterministic signals, not machine-learned probabilities
 - Chunks are persisted internally during upload processing; only aggregate `chunk_count` is exposed through the document overview response
-- No search or retrieval yet
+- TF-IDF document search exists, but semantic vector search, RAG, and generated answers are not implemented yet
 - No LLM provider integration yet
 - No report export yet
 - The frontend can load document overview data, but full frontend project creation, upload, and document management workflows are not implemented yet
 
-These limitations are intentional for the current Week 2 foundation. They keep the MVP local-first and focused before document intelligence features are added.
+These limitations build on the Week 2 foundation and are intentional for the current local-first milestone. They keep the MVP focused while document intelligence features are added incrementally.

@@ -1,18 +1,20 @@
 import json
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
 from backend.app.core.config import Settings, get_settings
 from backend.app.core.database import get_db
 from backend.app.models.analysis import Analysis
+from backend.app.models.document import Document
 from backend.app.schemas.document import (
     DocumentCreate,
     DocumentLocalAnalysisResponse,
     DocumentOverviewResponse,
     DocumentResponse,
     DocumentSectionSummariesResponse,
+    RetrievalResultResponse,
 )
 from backend.app.services.chunking import (
     ChunkPersistenceError,
@@ -40,6 +42,7 @@ from backend.app.services.document_service import (
     update_document_extraction_metadata,
 )
 from backend.app.services.project_service import get_project_by_id
+from backend.app.services.retrieval import RetrievalDependencyError, search_chunks
 from backend.app.services.section_detection import detect_sections
 from backend.app.services.text_cleaning import run_text_cleaning_pipeline
 
@@ -170,6 +173,48 @@ def get_document_section_summaries_route(
         )
 
     return section_summaries.to_dict()
+
+
+@overview_router.get(
+    "/{document_id}/search",
+    response_model=list[RetrievalResultResponse],
+)
+def search_document_chunks_route(
+    document_id: int,
+    q: str = Query(..., description="Local search query."),
+    top_k: int = Query(5, description="Maximum number of matching chunks to return."),
+    include_full_text: bool = Query(
+        False,
+        description="Include full chunk text instead of preview-only results.",
+    ),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    if document_id <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Document ID must be a positive integer.",
+        )
+
+    if db.get(Document, document_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found. Upload a document or use an existing document ID.",
+        )
+
+    try:
+        results = search_chunks(db, q, top_k=top_k, document_id=document_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    except RetrievalDependencyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+    return [result.to_response_dict(include_full_text=include_full_text) for result in results]
 
 
 @overview_router.post(
