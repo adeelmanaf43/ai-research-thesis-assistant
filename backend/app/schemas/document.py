@@ -93,13 +93,13 @@ class RetrievalResultResponse(BaseModel):
     page_start: int | None = None
     page_end: int | None = None
     score: float = Field(ge=0.0)
-    text_preview: str
+    text_preview: str = Field(min_length=1)
     full_text: str | None = None
 
 
 class DocumentChatRequest(BaseModel):
     question: str = Field(min_length=1)
-    top_k: int = Field(default=5, ge=1)
+    top_k: int = Field(default=5, ge=1, le=10)
 
 
 class SourceChunkResponse(BaseModel):
@@ -109,7 +109,7 @@ class SourceChunkResponse(BaseModel):
     page_start: int | None = None
     page_end: int | None = None
     score: float = Field(ge=0.0)
-    snippet: str
+    snippet: str = Field(min_length=1)
 
 
 class DocumentChatResponse(BaseModel):

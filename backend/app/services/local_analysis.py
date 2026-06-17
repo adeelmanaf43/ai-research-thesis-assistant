@@ -7,6 +7,10 @@ from typing import Protocol
 TOKEN_PATTERN = re.compile(r"\b[a-zA-Z][a-zA-Z-]{2,}\b")
 WORD_PATTERN = re.compile(r"\b[a-zA-Z][a-zA-Z'-]*\b")
 SENTENCE_PATTERN = re.compile(r"[^.!?]+[.!?]?")
+DECIMAL_DOT_PLACEHOLDER = "<DOT>"
+NUMBERED_HEADING_PREFIX_PATTERN = re.compile(
+    r"^\s*\d+(?:\.\d+)+\s+.+?\b" r"((?:In|The|This|These|Those|A|An|Although|However)\s+[a-z].*)$"
+)
 REFERENCE_ENTRY_PATTERN = re.compile(
     r"^\s*(?:\[\d+\]|\d+[\.)]|\w[\w'-]+,\s+(?:[A-Z]\.\s*)+|\w[\w'-]+\s+et\s+al\.)",
     re.IGNORECASE,
@@ -533,11 +537,22 @@ def estimate_reference_count(
 def _split_sentences(text: str | None) -> list[str]:
     if not text:
         return []
+    protected_text = re.sub(r"(?<=\d)\.(?=\d)", DECIMAL_DOT_PLACEHOLDER, text)
     return [
-        sentence.strip()
-        for sentence in SENTENCE_PATTERN.findall(text)
-        if count_analysis_words(sentence) > 0
+        _clean_summary_sentence(sentence.replace(DECIMAL_DOT_PLACEHOLDER, "."))
+        for sentence in SENTENCE_PATTERN.findall(protected_text)
+        if count_analysis_words(sentence.replace(DECIMAL_DOT_PLACEHOLDER, ".")) > 0
     ]
+
+
+def _clean_summary_sentence(sentence: str) -> str:
+    cleaned = " ".join(sentence.split())
+    heading_match = NUMBERED_HEADING_PREFIX_PATTERN.match(cleaned)
+    if heading_match:
+        candidate = heading_match.group(1).strip()
+        if count_analysis_words(candidate) >= 6:
+            return candidate
+    return cleaned
 
 
 def _sentence_score(sentence: str, keyword_frequencies: Counter[str], index: int) -> float:
@@ -551,6 +566,14 @@ def _sentence_score(sentence: str, keyword_frequencies: Counter[str], index: int
     return round((frequency_score / length_penalty) + position_bonus, 6)
 
 
+def _is_summary_candidate(sentence: str) -> bool:
+    if count_analysis_words(sentence) < 3:
+        return False
+    if re.match(r"^\s*\d+(?:\.\d+)+\s+\S+(?:\s+\S+){0,5}\s*$", sentence):
+        return False
+    return True
+
+
 def _fit_sentences_to_word_limit(
     scored_sentences: list[tuple[int, str, float]],
     max_words: int,
@@ -558,6 +581,8 @@ def _fit_sentences_to_word_limit(
     selected: list[tuple[int, str, float]] = []
     current_word_count = 0
     for sentence_index, sentence, score in scored_sentences:
+        if not _is_summary_candidate(sentence):
+            continue
         sentence_word_count = count_analysis_words(sentence)
         if sentence_word_count > max_words:
             continue

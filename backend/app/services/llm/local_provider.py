@@ -5,6 +5,10 @@ from backend.app.services.retrieval import RetrievalResult
 
 QUESTION_TOKEN_PATTERN = re.compile(r"\b[a-zA-Z][a-zA-Z'-]{2,}\b")
 SENTENCE_PATTERN = re.compile(r"[^.!?]+[.!?]?")
+DECIMAL_DOT_PLACEHOLDER = "<DOT>"
+NUMBERED_HEADING_PREFIX_PATTERN = re.compile(
+    r"^\s*\d+(?:\.\d+)+\s+.+?\b" r"((?:In|The|This|These|Those|A|An|Although|However)\s+[a-z].*)$"
+)
 QUESTION_STOPWORDS = {
     "about",
     "after",
@@ -89,11 +93,29 @@ def _question_terms(question: str) -> set[str]:
 
 
 def _split_sentences(text: str) -> list[str]:
+    protected_text = re.sub(r"(?<=\d)\.(?=\d)", DECIMAL_DOT_PLACEHOLDER, text)
     return [
-        " ".join(sentence.split())
-        for sentence in SENTENCE_PATTERN.findall(text)
+        _clean_sentence(sentence.replace(DECIMAL_DOT_PLACEHOLDER, "."))
+        for sentence in SENTENCE_PATTERN.findall(protected_text)
         if sentence.strip()
     ]
+
+
+def _clean_sentence(sentence: str) -> str:
+    cleaned = " ".join(sentence.split())
+    heading_match = NUMBERED_HEADING_PREFIX_PATTERN.match(cleaned)
+    if heading_match:
+        candidate = heading_match.group(1).strip()
+        if len(_question_terms(candidate)) >= 4:
+            return candidate
+    return cleaned
+
+
+def _is_substantive_sentence(sentence: str) -> bool:
+    terms = _question_terms(sentence)
+    if len(terms) < 4:
+        return False
+    return bool(re.search(r"[.!?]$", sentence.strip()))
 
 
 def _sentence_overlap_score(sentence: str, question_terms: set[str]) -> int:
@@ -104,7 +126,11 @@ def _sentence_overlap_score(sentence: str, question_terms: set[str]) -> int:
 
 
 def _best_source_snippet(chunk: RetrievalResult, question_terms: set[str]) -> SourceSnippet:
-    sentences = _split_sentences(chunk.text)
+    sentences = [
+        sentence for sentence in _split_sentences(chunk.text) if _is_substantive_sentence(sentence)
+    ]
+    if not sentences:
+        sentences = _split_sentences(chunk.text)
     best_sentence = max(
         sentences,
         key=lambda sentence: (
@@ -151,6 +177,8 @@ def answer_question(
     answer_candidates: list[tuple[int, int, int, str]] = []
     for chunk_position, chunk in enumerate(retrieved_chunks[:max_source_snippets]):
         for sentence_position, sentence in enumerate(_split_sentences(chunk.text)):
+            if not _is_substantive_sentence(sentence):
+                continue
             overlap_score = _sentence_overlap_score(sentence, question_terms)
             if overlap_score > 0:
                 answer_candidates.append(

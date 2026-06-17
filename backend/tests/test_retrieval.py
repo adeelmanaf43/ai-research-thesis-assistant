@@ -150,6 +150,37 @@ def test_search_chunks_ranks_most_relevant_academic_chunk_first(workspace_tmp_pa
     assert results[0].score > 0
 
 
+def test_search_chunks_boosts_exact_academic_phrases(workspace_tmp_path) -> None:
+    session_factory, database_engine, settings = _session_factory(workspace_tmp_path)
+
+    with session_factory() as session:
+        _create_document_with_chunks(
+            session,
+            settings,
+            "phrase-paper.pdf",
+            [
+                _chunk(
+                    0,
+                    "Citation tracking appears in this paragraph. "
+                    "Retrieval is discussed in another unrelated paragraph.",
+                    section_name="Introduction",
+                ),
+                _chunk(
+                    1,
+                    "The system improves citation tracking retrieval for thesis writers.",
+                    section_name="Results",
+                ),
+            ],
+        )
+
+        results = search_chunks(session, "citation tracking retrieval", top_k=2)
+
+    database_engine.dispose()
+
+    assert results[0].section_name == "Results"
+    assert results[0].score > results[1].score
+
+
 def test_search_chunks_filters_by_document_id(workspace_tmp_path) -> None:
     session_factory, database_engine, settings = _session_factory(workspace_tmp_path)
 
@@ -251,6 +282,7 @@ def test_search_chunks_returns_empty_list_for_missing_document_filter(workspace_
     [
         ("   ", 5, None, "Search query"),
         ("retrieval", 0, None, "top_k"),
+        ("retrieval", 11, None, "top_k"),
         ("retrieval", 5, 0, "Document ID"),
     ],
 )

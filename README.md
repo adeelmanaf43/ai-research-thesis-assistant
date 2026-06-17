@@ -209,7 +209,7 @@ Example local document chat:
 Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/api/documents/1/chat" -Method Post -ContentType "application/json" -Body '{"question":"What sample did the methodology use?","top_k":3}'
 ```
 
-The Streamlit frontend can load the document overview and section summaries when the backend is running. Use the default backend URL or set `THESIS_ASSISTANT_BACKEND_URL` before launching Streamlit.
+The Streamlit frontend can load the document overview, section summaries, local search results, and source-grounded Q&A fallback when the backend is running. Use the default backend URL or set `THESIS_ASSISTANT_BACKEND_URL` before launching Streamlit.
 
 ## Roadmap
 
@@ -217,8 +217,7 @@ Near-term milestones:
 
 - Public chunk API responses
 - Full frontend project and upload workflow
-- Source-grounded Q&A
-- Richer frontend display for local analysis and section summaries
+- Richer frontend project and upload workflow
 - Literature review matrix
 - Multi-paper comparison
 - Markdown, DOCX, and PDF report export
@@ -261,4 +260,4 @@ Planned placeholders:
 
 ## Documentation
 
-See [docs/setup.md](docs/setup.md), [docs/architecture.md](docs/architecture.md), [docs/api.md](docs/api.md), [docs/api-reference.md](docs/api-reference.md), [docs/week-02-demo.md](docs/week-02-demo.md), [docs/weekly-progress.md](docs/weekly-progress.md), [docs/week2-day1-validation.md](docs/week2-day1-validation.md), [docs/week2-day6-validation.md](docs/week2-day6-validation.md), [docs/learning-notes.md](docs/learning-notes.md), [docs/day1_validation.md](docs/day1_validation.md), [docs/day2_validation.md](docs/day2_validation.md), [docs/day3_validation.md](docs/day3_validation.md), [docs/day4_validation.md](docs/day4_validation.md), and [docs/day5_validation.md](docs/day5_validation.md) for more detail.
+See [docs/setup.md](docs/setup.md), [docs/architecture.md](docs/architecture.md), [docs/api.md](docs/api.md), [docs/api-reference.md](docs/api-reference.md), [docs/week-02-demo.md](docs/week-02-demo.md), [docs/week-03-demo.md](docs/week-03-demo.md), [docs/weekly-progress.md](docs/weekly-progress.md), [docs/week2-day1-validation.md](docs/week2-day1-validation.md), [docs/week2-day6-validation.md](docs/week2-day6-validation.md), [docs/learning-notes.md](docs/learning-notes.md), [docs/day1_validation.md](docs/day1_validation.md), [docs/day2_validation.md](docs/day2_validation.md), [docs/day3_validation.md](docs/day3_validation.md), [docs/day4_validation.md](docs/day4_validation.md), and [docs/day5_validation.md](docs/day5_validation.md) for more detail.

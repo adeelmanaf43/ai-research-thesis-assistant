@@ -348,6 +348,68 @@ Interview explanation:
 
 > I implemented local Q&A as an extractive fallback, not a generator. The provider uses retrieved chunks, selects evidence sentences, and says when the answer is not found. That keeps the system honest and gives future LLM providers a reliable local backup.
 
+## Week 3 Interview Notes: Local Intelligence System Design
+
+Week 3 turns the document pipeline into a useful local intelligence system. The important architecture story is that each stage produces evidence for the next stage instead of depending on one large AI call.
+
+System design flow:
+
+```text
+PDF upload -> extraction -> cleaning -> section detection -> chunking -> local analysis -> TF-IDF retrieval -> source-grounded Q&A fallback
+```
+
+Local-first design talking points:
+
+- The app remains useful with no paid API key, no mandatory Ollama, and no cloud provider.
+- SQLite stores projects, documents, chunks, analyses, and chat history locally.
+- Deterministic services provide a reliable baseline before optional AI providers are introduced.
+- Failure states are explicit: `ocr_needed`, `extraction_failed`, `chunking_failed`, or honest "answer not found" responses.
+- The system avoids sending full papers to any provider, which protects privacy and reduces context-size risk.
+
+Chunking talking points:
+
+- Chunks are the bridge between long PDFs and useful local intelligence.
+- Chunking happens after cleaning and section detection so each chunk has cleaner text and section metadata.
+- Overlap protects context at chunk boundaries, which matters for search and Q&A.
+- Stored chunk metadata includes chunk index, section name, approximate pages, text, and word count.
+- Reprocessing deletes stale chunks and inserts fresh chunks transactionally so old evidence does not mix with new evidence.
+
+Retrieval talking points:
+
+- TF-IDF is the first retrieval layer because it is deterministic, local, lightweight, and easy to test.
+- It works directly over stored SQLite chunks, so no embedding model or vector index server is required.
+- The API returns source metadata, scores, previews, and optional full text.
+- Phrase-aware TF-IDF with bigrams gives academic phrases a stronger signal while still staying simple.
+- FAISS or Chroma can be added later, but only after measuring what TF-IDF cannot solve.
+
+Fallback Q&A talking points:
+
+- The local provider is intentionally extractive: it selects relevant source sentences instead of generating new prose.
+- It returns source snippets with every answer so users can inspect evidence.
+- It refuses to answer when retrieved chunks do not contain enough evidence.
+- Chat history is persisted with `provider_mode="local"` so future provider comparisons remain auditable.
+- This fallback becomes the safety net when Ollama times out, a model gives weak output, or no cloud key exists.
+
+Interview explanation:
+
+> I designed Week 3 as a layered local intelligence stack. Clean chunks become searchable evidence, TF-IDF retrieves relevant chunks, and the local Q&A fallback answers only from those sources. This gives users real value without LLM dependency and creates a trustworthy baseline for future Ollama or cloud providers.
+
+Common interviewer question:
+
+> Why not start with embeddings and a vector database?
+
+Strong answer:
+
+> I wanted a deterministic baseline first. TF-IDF is fast, local, testable, and requires no model downloads. Once the app has real documents and evaluation examples, I can compare vector retrieval against TF-IDF instead of adding FAISS or Chroma prematurely.
+
+Common interviewer question:
+
+> How do you prevent hallucination without an LLM?
+
+Strong answer:
+
+> The fallback Q&A does not generate from memory. It retrieves chunks, selects overlapping source sentences, and returns an answer only when evidence exists. If evidence is missing, it says the answer was not found and still shows relevant snippets for user inspection.
+
 ## What Was Intentionally Not Built
 
 The current foundation intentionally does not include:

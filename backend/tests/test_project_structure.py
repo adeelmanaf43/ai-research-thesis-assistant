@@ -25,6 +25,7 @@ def test_hour_one_root_structure_exists() -> None:
         "docs/day5_validation.md",
         "docs/week2-day1-validation.md",
         "docs/week-02-demo.md",
+        "docs/week-03-demo.md",
         "docs/week2-day6-validation.md",
         "docs/api-reference.md",
         "docs/weekly-progress.md",
@@ -109,6 +110,7 @@ def test_readme_reflects_current_local_analysis_milestone() -> None:
     assert "Ruff linting and Black formatting configuration" in readme
     assert "docs/api-reference.md" in readme
     assert "docs/week-02-demo.md" in readme
+    assert "docs/week-03-demo.md" in readme
     assert "docs/weekly-progress.md" in readme
     assert "docs/week2-day1-validation.md" in readme
     assert "docs/learning-notes.md" in readme
@@ -247,6 +249,26 @@ def test_learning_notes_explain_week_two_cleaning_before_chunking_and_ai() -> No
     assert "quality gate before chunking" in learning_notes
     assert "AI as a cleanup shortcut" in learning_notes
     assert ".cleaned.txt" in learning_notes
+
+
+def test_learning_notes_explain_week_three_local_intelligence_design() -> None:
+    learning_notes = (PROJECT_ROOT / "docs" / "learning-notes.md").read_text(encoding="utf-8")
+
+    required_content = [
+        "Week 3 Interview Notes: Local Intelligence System Design",
+        "PDF upload -> extraction -> cleaning -> section detection -> chunking",
+        "Local-first design talking points",
+        "Chunking talking points",
+        "Retrieval talking points",
+        "Fallback Q&A talking points",
+        "Phrase-aware TF-IDF with bigrams",
+        'provider_mode="local"',
+        "Why not start with embeddings and a vector database?",
+        "How do you prevent hallucination without an LLM?",
+    ]
+
+    for expected_text in required_content:
+        assert expected_text in learning_notes
 
 
 def test_day_five_validation_documents_quality_baseline() -> None:
@@ -431,6 +453,33 @@ def test_week_two_demo_documents_exact_demo_steps() -> None:
         "190 passed",
         "without paid APIs",
         "data/uploads/",
+    ]
+
+    for expected_text in required_content:
+        assert expected_text in demo_doc
+
+
+def test_week_three_demo_documents_local_intelligence_flow() -> None:
+    demo_doc = (PROJECT_ROOT / "docs" / "week-03-demo.md").read_text(encoding="utf-8")
+
+    required_content = [
+        "Week 3 Demo",
+        "sample_data\\thesis.pdf",
+        "What This Demo Proves",
+        "Start Backend",
+        "Upload Thesis PDF",
+        "Generate Local Overview Analysis",
+        "Generate Section Summaries",
+        "Extract Research Information",
+        "Search Stored Chunks",
+        "Ask Source-Grounded Local Q&A",
+        "Confirm Chat History",
+        "Open Streamlit Demo",
+        "Screenshot Placeholder",
+        "315 passed",
+        "does not require paid API keys",
+        'provider_mode="local"',
+        "Private PDFs and generated demo data are ignored by Git",
     ]
 
     for expected_text in required_content:

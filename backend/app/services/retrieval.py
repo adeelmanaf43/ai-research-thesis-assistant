@@ -15,6 +15,9 @@ class RetrievalDependencyError(RuntimeError):
     """Raised when local retrieval dependencies are not installed."""
 
 
+MAX_TOP_K = 10
+
+
 @dataclass(frozen=True)
 class RetrievalResult:
     chunk_id: int
@@ -66,6 +69,8 @@ def _validate_retrieval_inputs(
         raise ValueError("Search query must not be empty.")
     if top_k < 1:
         raise ValueError("top_k must be a positive integer.")
+    if top_k > MAX_TOP_K:
+        raise ValueError(f"top_k must be less than or equal to {MAX_TOP_K}.")
     if document_id is not None and document_id <= 0:
         raise ValueError("Document ID must be a positive integer.")
     return cleaned_query
@@ -98,7 +103,11 @@ def search_chunks(
         )
 
     chunk_texts = [chunk.text for chunk in chunks]
-    vectorizer = TfidfVectorizer(stop_words="english")
+    vectorizer = TfidfVectorizer(
+        ngram_range=(1, 2),
+        stop_words="english",
+        sublinear_tf=True,
+    )
     try:
         chunk_matrix = vectorizer.fit_transform(chunk_texts)
         query_vector = vectorizer.transform([cleaned_query])

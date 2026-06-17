@@ -263,6 +263,41 @@ def test_summarize_section_never_exceeds_word_limit() -> None:
     assert count_analysis_words(summary.summary) <= 8
 
 
+def test_summarize_section_skips_numbered_heading_fragments() -> None:
+    section = _section(
+        "discussion",
+        "Discussion",
+        "2.1.3 Fatty Acid Nomenclature. "
+        "2.2 Classification of Fatty Acids. "
+        "The discussion explains that fatty acids differ by molecular structure. "
+        "The review connects these differences to food product analysis.",
+    )
+
+    summary = summarize_section(section, max_sentences=2, max_words=30)
+
+    assert summary is not None
+    assert "2.1.3" not in summary.summary
+    assert "Classification of Fatty Acids" not in summary.summary
+    assert "fatty acids differ" in summary.summary
+
+
+def test_summarize_section_trims_numbered_heading_prefix_from_sentence() -> None:
+    section = _section(
+        "discussion",
+        "Discussion",
+        "2.12.2 European Union Regulation on Trans Fatty Acids "
+        "In the European Union, industrially produced trans fatty acids "
+        "are regulated by quantitative restrictions. "
+        "The review links this policy context to food product analysis.",
+    )
+
+    summary = summarize_section(section, max_sentences=1, max_words=30)
+
+    assert summary is not None
+    assert summary.summary.startswith("In the European Union")
+    assert "2.12.2" not in summary.summary
+
+
 def test_summarize_section_returns_empty_when_no_sentence_fits_word_limit() -> None:
     section = _section(
         "discussion",

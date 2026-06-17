@@ -547,7 +547,7 @@ Searches stored chunks for one document with local TF-IDF retrieval.
 Query parameters:
 
 - `q`: required search query.
-- `top_k`: optional maximum number of chunks to return. Default is `5`.
+- `top_k`: optional maximum number of chunks to return. Default is `5`, maximum is `10`.
 - `include_full_text`: optional boolean. Default is `false`.
 
 Example request:
@@ -590,6 +590,11 @@ Search behavior:
 ### `POST /api/documents/{document_id}/chat`
 
 Retrieves top chunks for a document, creates a local extractive answer, stores chat history, and returns the answer with source chunks.
+
+Request body:
+
+- `question`: required user question.
+- `top_k`: optional maximum number of retrieved chunks to use. Default is `5`, maximum is `10`.
 
 Example request:
 

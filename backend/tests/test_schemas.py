@@ -243,6 +243,16 @@ def test_retrieval_result_response_rejects_negative_score() -> None:
         )
 
 
+def test_retrieval_result_response_rejects_empty_preview() -> None:
+    with pytest.raises(ValidationError):
+        RetrievalResultResponse(
+            chunk_id=12,
+            chunk_index=4,
+            score=0.1,
+            text_preview="",
+        )
+
+
 def test_document_chat_request_validates_question_and_top_k() -> None:
     schema = DocumentChatRequest(question=" What did retrieval improve? ", top_k=3)
 
@@ -253,6 +263,8 @@ def test_document_chat_request_validates_question_and_top_k() -> None:
         DocumentChatRequest(question="", top_k=3)
     with pytest.raises(ValidationError):
         DocumentChatRequest(question="What did retrieval improve?", top_k=0)
+    with pytest.raises(ValidationError):
+        DocumentChatRequest(question="What did retrieval improve?", top_k=11)
 
 
 def test_document_chat_response_serializes_source_chunks() -> None:
@@ -282,3 +294,24 @@ def test_document_chat_response_serializes_source_chunks() -> None:
     assert payload["provider_mode"] == "local"
     assert payload["source_chunks"][0]["chunk_id"] == 12
     assert payload["source_chunks"][0]["snippet"] == "Retrieval improved citation confidence."
+
+
+def test_document_chat_response_rejects_empty_source_snippet() -> None:
+    with pytest.raises(ValidationError):
+        DocumentChatResponse(
+            chat_id=5,
+            document_id=10,
+            question="What did retrieval improve?",
+            answer="Retrieval improved citation confidence.",
+            answer_found=True,
+            provider_mode="local",
+            source_chunks=[
+                {
+                    "chunk_id": 12,
+                    "chunk_index": 0,
+                    "score": 0.74,
+                    "snippet": "",
+                }
+            ],
+            limitations=["Local fallback answers are extractive."],
+        )

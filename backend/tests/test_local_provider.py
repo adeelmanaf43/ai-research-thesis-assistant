@@ -96,6 +96,44 @@ def test_answer_question_says_when_answer_is_not_found() -> None:
     )
 
 
+def test_answer_question_ignores_numbered_heading_fragments() -> None:
+    chunks = [
+        _result(
+            "2.1.3 Fatty Acid Nomenclature. "
+            "2.2 Classification of Fatty Acids. "
+            "The literature review explains that fatty acids are classified by "
+            "saturation level and molecular structure.",
+            section_name="Literature Review",
+        )
+    ]
+
+    answer = answer_question("What does the document say about fatty acids?", chunks)
+
+    assert answer.answer_found is True
+    assert answer.answer == (
+        "The literature review explains that fatty acids are classified by "
+        "saturation level and molecular structure."
+    )
+    assert "2.1.3" not in answer.answer
+
+
+def test_answer_question_trims_numbered_heading_prefix_from_sentence() -> None:
+    chunks = [
+        _result(
+            "2.12.2 European Union Regulation on Trans Fatty Acids "
+            "In the European Union, industrially produced trans fatty acids "
+            "are regulated by quantitative restrictions.",
+            section_name="Literature Review",
+        )
+    ]
+
+    answer = answer_question("What does the document say about trans fatty acids?", chunks)
+
+    assert answer.answer_found is True
+    assert answer.answer.startswith("In the European Union")
+    assert "2.12.2" not in answer.answer
+
+
 def test_answer_question_handles_no_retrieved_chunks() -> None:
     answer = answer_question("What did the study find?", [])
 
