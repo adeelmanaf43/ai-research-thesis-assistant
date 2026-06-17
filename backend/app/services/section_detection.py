@@ -69,6 +69,9 @@ def _normalize_heading(heading: str) -> str:
 
 def classify_heading(line: str) -> SectionType | None:
     match = NUMBERED_HEADING_PATTERN.match(line)
+    normalized_line = _normalize_heading(line)
+    if normalized_line.startswith(("references", "bibliography", "works cited")):
+        return "references"
     if not match:
         return None
 
@@ -76,6 +79,15 @@ def classify_heading(line: str) -> SectionType | None:
     for section_type, aliases in HEADING_ALIASES.items():
         if normalized_heading in aliases:
             return section_type
+    if normalized_heading.startswith(("results of ", "findings from ", "findings of ")):
+        return "results"
+    chapter_match = re.match(r"^\s*(?P<chapter>[456])(?:\.\d+)+", line)
+    if chapter_match:
+        return {
+            "4": "results",
+            "5": "discussion",
+            "6": "conclusion",
+        }[chapter_match.group("chapter")]
     return None
 
 

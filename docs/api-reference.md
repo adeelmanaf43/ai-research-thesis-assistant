@@ -535,7 +535,10 @@ Expected status:
 Section summary behavior:
 
 - Supports abstract, introduction, methodology, results, discussion, and conclusion.
+- Supports literature review summaries when that section is detected.
 - Skips unsupported sections such as title and references.
+- Skips empty sections, table-of-contents fragments, obvious figure/table captions, URLs, and reference-like fragments.
+- Returns the best non-empty summary per section type when duplicate headings are detected.
 - Returns source section names and source sentence indexes for traceability.
 - Includes confidence and limitations because section detection and sentence scoring are heuristic.
 - Does not call Ollama, cloud providers, or paid APIs.

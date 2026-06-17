@@ -298,6 +298,60 @@ def test_summarize_section_trims_numbered_heading_prefix_from_sentence() -> None
     assert "2.12.2" not in summary.summary
 
 
+def test_summarize_section_supports_literature_review() -> None:
+    section = _section(
+        "literature_review",
+        "Literature Review",
+        "Prior studies show that source-grounded retrieval improves review quality. "
+        "Academic tools need transparent evidence for thesis writing.",
+    )
+
+    summary = summarize_section(section, max_sentences=1, max_words=20)
+
+    assert summary is not None
+    assert summary.section_type == "literature_review"
+    assert "source-grounded retrieval improves review quality" in summary.summary
+
+
+def test_summarize_section_filters_outline_and_reference_fragments() -> None:
+    section = _section(
+        "discussion",
+        "Discussion",
+        "5.1 Summary 5.2 Interpretation 5.3 Limitations 5.4 Future Research. "
+        "\uf0b7 Summary of key findings \uf0b7 Interpretation of TFA findings "
+        "\uf0b7 Future research. "
+        "org/10.1007/s44187-024-00240-2 Delgado, A. "
+        "The discussion explains that local evidence improves review confidence.",
+    )
+
+    summary = summarize_section(section, max_sentences=2, max_words=30)
+
+    assert summary is not None
+    assert summary.summary == (
+        "The discussion explains that local evidence improves review confidence."
+    )
+
+
+def test_summarize_section_filters_placeholders_urls_and_captions() -> None:
+    section = _section(
+        "methodology",
+        "Methodology",
+        "Introduction—need to modify it later. "
+        "The study used national food composition databases to analyse bakery products. "
+        "https://example.com/source "
+        "The analysis focused on trans fatty acid values reported in public databases. "
+        "Distribution of trans fatty acid content across countries among high-fat products.",
+    )
+
+    summary = summarize_section(section, max_sentences=2, max_words=35)
+
+    assert summary is not None
+    assert "modify it later" not in summary.summary
+    assert "https://" not in summary.summary
+    assert "Distribution of" not in summary.summary
+    assert "national food composition databases" in summary.summary
+
+
 def test_summarize_section_returns_empty_when_no_sentence_fits_word_limit() -> None:
     section = _section(
         "discussion",

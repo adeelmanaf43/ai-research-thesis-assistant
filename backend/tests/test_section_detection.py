@@ -7,9 +7,14 @@ def test_classify_heading_detects_academic_section_aliases() -> None:
     assert classify_heading("2 Literature Review") == "literature_review"
     assert classify_heading("3. Materials and Methods") == "methodology"
     assert classify_heading("4) Findings") == "results"
+    assert classify_heading("4.1 Results of Phase I") == "results"
+    assert classify_heading("4.2.2 Dataset Overview and Availability") == "results"
     assert classify_heading("Discussion") == "discussion"
+    assert classify_heading("5.7 Data Availability and Database Limitations") == "discussion"
     assert classify_heading("Concluding Remarks") == "conclusion"
+    assert classify_heading("6.1 Policy Implications") == "conclusion"
     assert classify_heading("Works Cited") == "references"
+    assert classify_heading("References (OF LITERATURE REVIEW)") == "references"
     assert classify_heading("A normal sentence with punctuation.") is None
 
 

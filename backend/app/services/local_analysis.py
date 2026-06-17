@@ -9,16 +9,20 @@ WORD_PATTERN = re.compile(r"\b[a-zA-Z][a-zA-Z'-]*\b")
 SENTENCE_PATTERN = re.compile(r"[^.!?]+[.!?]?")
 DECIMAL_DOT_PLACEHOLDER = "<DOT>"
 NUMBERED_HEADING_PREFIX_PATTERN = re.compile(
-    r"^\s*\d+(?:\.\d+)+\s+.+?\b" r"((?:In|The|This|These|Those|A|An|Although|However)\s+[a-z].*)$"
+    r"^\s*\d+(?:\.\d+)+\s+.+?\b"
+    r"((?:According|Although|Based|However|In|The|Thermal|This|These|Those|To|"
+    r"Trans|A|An)\s+[a-z].*)$"
 )
 REFERENCE_ENTRY_PATTERN = re.compile(
     r"^\s*(?:\[\d+\]|\d+[\.)]|\w[\w'-]+,\s+(?:[A-Z]\.\s*)+|\w[\w'-]+\s+et\s+al\.)",
     re.IGNORECASE,
 )
 VOWEL_GROUP_PATTERN = re.compile(r"[aeiouy]+", re.IGNORECASE)
+URL_PATTERN = re.compile(r"https?://\S+")
 SUMMARY_SECTION_TYPES = {
     "abstract",
     "introduction",
+    "literature_review",
     "methodology",
     "results",
     "discussion",
@@ -546,7 +550,7 @@ def _split_sentences(text: str | None) -> list[str]:
 
 
 def _clean_summary_sentence(sentence: str) -> str:
-    cleaned = " ".join(sentence.split())
+    cleaned = " ".join(URL_PATTERN.sub("", sentence).split())
     heading_match = NUMBERED_HEADING_PREFIX_PATTERN.match(cleaned)
     if heading_match:
         candidate = heading_match.group(1).strip()
@@ -568,6 +572,24 @@ def _sentence_score(sentence: str, keyword_frequencies: Counter[str], index: int
 
 def _is_summary_candidate(sentence: str) -> bool:
     if count_analysis_words(sentence) < 3:
+        return False
+    stripped = sentence.strip()
+    lowered = stripped.lower()
+    if stripped.startswith((",", ";", ":", ")", "]")):
+        return False
+    if "need to modify" in lowered or "modify it later" in lowered:
+        return False
+    if lowered.startswith(("figure ", "table ", "distribution of ", "appendix ")):
+        return False
+    if lowered.startswith("number of ") or "distribution of" in lowered:
+        return False
+    if "presented in figure" in lowered or re.search(r"\bfigure\s+x\b", lowered):
+        return False
+    if re.search(r"\b(?:doi|org|https?://|www\.)", stripped, re.IGNORECASE):
+        return False
+    if len(re.findall(r"\b\d+(?:\.\d+)+\s+[A-Z]", stripped)) >= 2:
+        return False
+    if stripped.count("\uf0b7") >= 2 or stripped.count("•") >= 2:
         return False
     if re.match(r"^\s*\d+(?:\.\d+)+\s+\S+(?:\s+\S+){0,5}\s*$", sentence):
         return False

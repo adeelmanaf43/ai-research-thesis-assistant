@@ -444,25 +444,43 @@ def get_document_section_summaries(
             ],
         )
 
-    summaries: list[SectionSummaryResult] = []
-    source_section_names: list[str] = []
+    summaries_by_type: dict[str, SectionSummaryResult] = {}
+    source_names_by_type: dict[str, str] = {}
     for section in sections:
         summary = summarize_section(section)
-        if summary is None:
+        if summary is None or not summary.summary:
             continue
 
-        source_section_names.append(section.section_name)
-        summaries.append(
-            SectionSummaryResult(
-                section_name=summary.section_name,
-                section_type=summary.section_type,
-                summary=summary.summary,
-                selected_sentence_count=summary.selected_sentence_count,
-                source_sentence_indexes=summary.source_sentence_indexes,
-                confidence=_summary_confidence(section, summary),
-                limitations=_summary_limitations(section, summary),
-            )
+        candidate = SectionSummaryResult(
+            section_name=summary.section_name,
+            section_type=summary.section_type,
+            summary=summary.summary,
+            selected_sentence_count=summary.selected_sentence_count,
+            source_sentence_indexes=summary.source_sentence_indexes,
+            confidence=_summary_confidence(section, summary),
+            limitations=_summary_limitations(section, summary),
         )
+        existing = summaries_by_type.get(summary.section_type)
+        candidate_score = (
+            candidate.selected_sentence_count,
+            candidate.confidence,
+            count_words(candidate.summary),
+        )
+        existing_score = (
+            (
+                existing.selected_sentence_count,
+                existing.confidence,
+                count_words(existing.summary),
+            )
+            if existing
+            else None
+        )
+        if existing is None or candidate_score > existing_score:
+            summaries_by_type[summary.section_type] = candidate
+            source_names_by_type[summary.section_type] = section.section_name
+
+    summaries = list(summaries_by_type.values())
+    source_section_names = list(source_names_by_type.values())
 
     limitations = [
         (
@@ -471,7 +489,7 @@ def get_document_section_summaries(
         )
     ]
     if not summaries:
-        limitations.append("No supported academic sections were available for summarization.")
+        limitations.append("No useful summary sentences were found in supported sections.")
 
     return DocumentSectionSummaries(
         document_id=document.id,

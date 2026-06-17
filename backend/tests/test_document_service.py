@@ -16,6 +16,7 @@ from backend.app.services.document_service import (
     create_document_research_info_local_analysis,
     create_document_section_summaries_local_analysis,
     create_section_detection_analysis,
+    get_document_section_summaries,
     is_ocr_likely_needed,
     list_documents_by_project,
     save_text_processing_artifacts,
@@ -249,6 +250,45 @@ def test_create_document_section_summaries_local_analysis_persists_output_json(
         assert payload["source_section_names"] == ["Introduction"]
         assert payload["summaries"][0]["section_type"] == "introduction"
         assert "Retrieval supports local analysis." in payload["summaries"][0]["summary"]
+
+    database_engine.dispose()
+
+
+def test_get_document_section_summaries_keeps_best_substantive_section(
+    workspace_tmp_path: Path,
+) -> None:
+    session_factory, database_engine, settings = _session_factory(workspace_tmp_path)
+
+    with session_factory() as session:
+        project = create_project(session, ProjectCreate(name="Best summary project"))
+        saved_file = save_uploaded_file(settings.upload_dir, project.id, "paper.pdf", b"content")
+        document = create_document_record(
+            session,
+            DocumentCreate(project_id=project.id, original_filename="paper.pdf"),
+            saved_file.stored_filename,
+            saved_file.file_path,
+        )
+        sections = detect_sections(
+            "Introduction\n"
+            "1.1 Background 1.2 Objectives 1.3 Research Questions\n\n"
+            "Introduction\n"
+            "Retrieval supports local analysis for thesis writers. "
+            "Students use evidence to review literature faster.\n\n"
+            "Literature Review\n"
+            "Prior studies show that source-grounded retrieval improves academic review."
+        )
+        create_section_detection_analysis(session, document, sections)
+
+        section_summaries = get_document_section_summaries(session, document.id)
+
+        assert section_summaries is not None
+        summaries_by_type = {
+            summary.section_type: summary.summary for summary in section_summaries.summaries
+        }
+        assert set(summaries_by_type) == {"introduction", "literature_review"}
+        assert "1.1 Background" not in summaries_by_type["introduction"]
+        assert "Retrieval supports local analysis" in summaries_by_type["introduction"]
+        assert "Prior studies show" in summaries_by_type["literature_review"]
 
     database_engine.dispose()
 
