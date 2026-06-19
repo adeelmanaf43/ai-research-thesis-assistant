@@ -1,7 +1,9 @@
 import pytest
 
+from backend.app.services.llm.base import BaseLLMProvider
 from backend.app.services.llm.local_provider import (
     LocalAnswer,
+    LocalLLMProvider,
     SourceSnippet,
     answer_question,
 )
@@ -168,6 +170,90 @@ def test_answer_question_serializes_for_api_use() -> None:
     assert payload["provider"] == "local"
     assert payload["source_snippets"][0]["chunk_id"] == 7
     assert payload["limitations"] == answer.limitations
+
+
+def test_local_llm_provider_implements_base_interface() -> None:
+    provider = LocalLLMProvider()
+
+    assert isinstance(provider, BaseLLMProvider)
+    assert provider.provider_name == "local"
+
+
+def test_local_llm_provider_generates_extractive_summary() -> None:
+    provider = LocalLLMProvider()
+
+    response = provider.generate_summary(
+        "The study evaluates local document retrieval for thesis writing. "
+        "The results show improved source tracking and faster literature review work.",
+        max_words=25,
+    )
+
+    assert response.provider == "local"
+    assert "local document retrieval" in response.content
+    assert response.metadata["method"] == "extractive_sentence_scoring"
+    assert response.metadata["selected_sentence_count"] >= 1
+    assert response.used_fallback is False
+    assert "No external model" in response.limitations[1]
+
+
+def test_local_llm_provider_answers_from_context_chunks() -> None:
+    provider = LocalLLMProvider()
+
+    response = provider.answer_question(
+        "What sample did the methodology use?",
+        [
+            {
+                "chunk_id": 5,
+                "document_id": 2,
+                "chunk_index": 0,
+                "section_name": "Methodology",
+                "page_start": 4,
+                "page_end": 5,
+                "score": 0.91,
+                "text": (
+                    "The methodology used a survey sample of 120 postgraduate students. "
+                    "The survey measured citation confidence."
+                ),
+            }
+        ],
+    )
+
+    assert response.provider == "local"
+    assert response.metadata["answer_found"] is True
+    assert response.content == "The methodology used a survey sample of 120 postgraduate students."
+    assert response.source_chunks[0]["chunk_id"] == 5
+
+
+def test_local_llm_provider_extracts_research_info_locally() -> None:
+    provider = LocalLLMProvider()
+
+    response = provider.extract_research_info(
+        "",
+        sections=[
+            {
+                "section_name": "Introduction",
+                "section_type": "introduction",
+                "text": "The objective of this study is to improve local thesis analysis.",
+            }
+        ],
+    )
+
+    objective = response.metadata["fields"]["objectives"]
+
+    assert response.provider == "local"
+    assert response.content == "local_research_info"
+    assert objective["source_section"] == "Introduction"
+    assert "objective" in objective["extracted_text"].lower()
+
+
+def test_local_llm_provider_health_check_is_always_available() -> None:
+    provider = LocalLLMProvider()
+
+    health = provider.health_check()
+
+    assert health.provider == "local"
+    assert health.available is True
+    assert health.details == {"requires_network": False, "requires_ollama": False}
 
 
 @pytest.mark.parametrize(

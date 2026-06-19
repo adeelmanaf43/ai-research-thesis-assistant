@@ -109,7 +109,7 @@ Run the frontend:
 
 ## Current Features
 
-Week 3, Day 2: Local extractive section summaries.
+Week 4, Day 1: Provider abstraction and local provider implementation.
 
 Included now:
 
@@ -145,6 +145,7 @@ Included now:
 - Local document search endpoint with preview-first retrieval results
 - Local extractive Q&A fallback that answers only from retrieved source chunks
 - Local document chat endpoint that stores `ChatHistory` with `provider_mode="local"`
+- Base LLM provider interface and factory with local default and safe future Ollama fallback
 - Project-scoped document listing endpoint that hides internal storage paths
 - Streamlit document overview panel that loads backend overview and section summary data when FastAPI is running
 - Ruff linting and Black formatting configuration
@@ -236,7 +237,7 @@ Not included yet:
 - Public chunk API responses
 - Full frontend display for all local analysis output
 - Generative summaries or rewritten prose
-- LLM providers
+- External LLM providers such as Ollama or cloud APIs
 - RAG and source-grounded answer generation
 - Report export
 - Authentication
@@ -244,7 +245,7 @@ Not included yet:
 - Docker
 - Cloud AI APIs
 
-The current upload API stores PDF bytes, creates document metadata, attempts local PyMuPDF extraction, runs deterministic text cleaning, saves internal raw/cleaned text artifacts, stores detected sections as local analysis output, and persists internal chunks after successful section detection. The local overview analysis API can generate and store deterministic keyword/statistics output from processed documents. Section summaries are extractive and select source sentences from detected sections rather than generating new prose, and they can be saved as local analysis output with `provider_mode="local"`. Section detection, keyword extraction, reference counting, readability metrics, and extractive summaries are rule-based and explainable, not replacements for semantic document understanding. The app does not summarize or analyze document content with an AI provider yet.
+The current upload API stores PDF bytes, creates document metadata, attempts local PyMuPDF extraction, runs deterministic text cleaning, saves internal raw/cleaned text artifacts, stores detected sections as local analysis output, and persists internal chunks after successful section detection. The local overview analysis API can generate and store deterministic keyword/statistics output from processed documents. Section summaries are extractive and select source sentences from detected sections rather than generating new prose, and they can be saved as local analysis output with `provider_mode="local"`. Section detection, keyword extraction, reference counting, readability metrics, and extractive summaries are rule-based and explainable, not replacements for semantic document understanding. The app does not use external or generative AI providers yet.
 
 ## Screenshots
 
@@ -260,4 +261,4 @@ Planned placeholders:
 
 ## Documentation
 
-See [docs/setup.md](docs/setup.md), [docs/architecture.md](docs/architecture.md), [docs/api.md](docs/api.md), [docs/api-reference.md](docs/api-reference.md), [docs/week-02-demo.md](docs/week-02-demo.md), [docs/week-03-demo.md](docs/week-03-demo.md), [docs/weekly-progress.md](docs/weekly-progress.md), [docs/week2-day1-validation.md](docs/week2-day1-validation.md), [docs/week2-day6-validation.md](docs/week2-day6-validation.md), [docs/learning-notes.md](docs/learning-notes.md), [docs/day1_validation.md](docs/day1_validation.md), [docs/day2_validation.md](docs/day2_validation.md), [docs/day3_validation.md](docs/day3_validation.md), [docs/day4_validation.md](docs/day4_validation.md), and [docs/day5_validation.md](docs/day5_validation.md) for more detail.
+See [docs/setup.md](docs/setup.md), [docs/architecture.md](docs/architecture.md), [docs/provider-architecture.md](docs/provider-architecture.md), [docs/api.md](docs/api.md), [docs/api-reference.md](docs/api-reference.md), [docs/week-02-demo.md](docs/week-02-demo.md), [docs/week-03-demo.md](docs/week-03-demo.md), [docs/weekly-progress.md](docs/weekly-progress.md), [docs/week2-day1-validation.md](docs/week2-day1-validation.md), [docs/week2-day6-validation.md](docs/week2-day6-validation.md), [docs/learning-notes.md](docs/learning-notes.md), [docs/day1_validation.md](docs/day1_validation.md), [docs/day2_validation.md](docs/day2_validation.md), [docs/day3_validation.md](docs/day3_validation.md), [docs/day4_validation.md](docs/day4_validation.md), and [docs/day5_validation.md](docs/day5_validation.md) for more detail.

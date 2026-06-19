@@ -28,6 +28,7 @@ def test_hour_one_root_structure_exists() -> None:
         "docs/week-03-demo.md",
         "docs/week2-day6-validation.md",
         "docs/api-reference.md",
+        "docs/provider-architecture.md",
         "docs/weekly-progress.md",
         "docs/learning-notes.md",
     ]
@@ -67,6 +68,7 @@ def test_docs_do_not_hardcode_local_machine_paths() -> None:
         PROJECT_ROOT / "README.md",
         PROJECT_ROOT / "backend" / "README.md",
         PROJECT_ROOT / "docs" / "api-reference.md",
+        PROJECT_ROOT / "docs" / "provider-architecture.md",
         PROJECT_ROOT / "docs" / "weekly-progress.md",
         PROJECT_ROOT / "docs" / "learning-notes.md",
         PROJECT_ROOT / "docs" / "day1_validation.md",
@@ -86,7 +88,7 @@ def test_docs_do_not_hardcode_local_machine_paths() -> None:
 def test_readme_reflects_current_local_analysis_milestone() -> None:
     readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
 
-    assert "Week 3, Day 2: Local extractive section summaries." in readme
+    assert "Week 4, Day 1: Provider abstraction and local provider implementation." in readme
     assert "Project CRUD service layer and FastAPI routes" in readme
     assert "Safe document storage path helpers" in readme
     assert "Document service functions" in readme
@@ -109,6 +111,7 @@ def test_readme_reflects_current_local_analysis_milestone() -> None:
     assert "/api/analysis/1/research-info" in readme
     assert "Ruff linting and Black formatting configuration" in readme
     assert "docs/api-reference.md" in readme
+    assert "docs/provider-architecture.md" in readme
     assert "docs/week-02-demo.md" in readme
     assert "docs/week-03-demo.md" in readme
     assert "docs/weekly-progress.md" in readme
@@ -484,3 +487,25 @@ def test_week_three_demo_documents_local_intelligence_flow() -> None:
 
     for expected_text in required_content:
         assert expected_text in demo_doc
+
+
+def test_provider_architecture_documents_provider_independence() -> None:
+    provider_doc = (PROJECT_ROOT / "docs" / "provider-architecture.md").read_text(encoding="utf-8")
+
+    required_content = [
+        "Provider Architecture",
+        "Local processing is the foundation",
+        "BaseLLMProvider",
+        "LocalLLMProvider",
+        "provider factory",
+        "PROVIDER_MODE=local",
+        "PROVIDER_MODE=ollama",
+        "falls back to local",
+        "ProviderConfigurationError",
+        "Do not send full documents",
+        "Never require paid API keys",
+        "Never hardcode secrets",
+    ]
+
+    for expected_text in required_content:
+        assert expected_text in provider_doc

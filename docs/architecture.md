@@ -105,6 +105,12 @@ FAISS, Chroma, or another vector store can be added later when semantic retrieva
 
 Local source-grounded Q&A fallback starts in `backend/app/services/llm/local_provider.py` and is exposed through `POST /api/documents/{document_id}/chat`. It does not call an LLM. The chat service retrieves chunks with local TF-IDF, selects source sentences with question-term overlap, stores a `chat_history` row with `provider_mode="local"`, and returns an extractive answer with source snippets. If the retrieved chunks do not contain an answer, it says so explicitly instead of guessing. This keeps the app useful and honest before Ollama or cloud providers are added.
 
+The provider abstraction starts in `backend/app/services/llm/base.py`. `BaseLLMProvider` defines the required interface for `generate_summary`, `answer_question`, `extract_research_info`, and `health_check`. This contract keeps future Ollama or cloud providers behind the same boundary while preserving local-first behavior. Provider responses include source metadata, limitations, fallback flags, and health status so routes can handle unavailable providers without breaking document processing.
+
+The local implementation is `LocalLLMProvider` in `backend/app/services/llm/local_provider.py`. It implements the provider interface without calling an external model. Summaries use local extractive sentence scoring, answers use retrieved source chunks, research information uses local rules, and `health_check()` is always available because it has no network or Ollama dependency. Existing function-based local Q&A remains available so current routes continue to work while the provider architecture evolves.
+
+Provider selection starts in `backend/app/services/llm/factory.py`. The factory reads the configured provider mode and returns a concrete provider selection. `local` resolves to `LocalLLMProvider`; `ollama` is recognized as a future optional mode and currently falls back to local with an explicit message. Unknown provider modes raise a clear configuration error. This keeps local mode dependable while leaving a controlled extension point for Ollama in later milestones.
+
 ## Project API
 
 Project routes live in `backend/app/api/routes_projects.py` and are mounted under `/api/projects`. They remain thin FastAPI handlers over the project service layer.
